@@ -3,16 +3,17 @@
 
 class Controller : public ODriveIntf::ControllerIntf {
 public:
-    typedef struct {
+    struct Anticogging_t{
         uint32_t index = 0;
-        float cogging_map[3600];
+        float cogging_map[1024] = {0}; // [Nm]
+        float anticogging_integrator_gain = 0.0f; // [Nm/s / (turns/s)]
+        static constexpr size_t cogging_map_size = sizeof(cogging_map) / sizeof(cogging_map[0]);
+        float anticogging_max_torque = 0.15f; // [Nm]
         bool pre_calibrated = false;
         bool calib_anticogging = false;
-        float calib_pos_threshold = 1.0f;
-        float calib_vel_threshold = 1.0f;
         float cogging_ratio = 1.0f;
         bool anticogging_enabled = true;
-    } Anticogging_t;
+    };
 
     struct Config_t {
         ControlMode control_mode = CONTROL_MODE_POSITION_CONTROL;  //see: ControlMode_t
@@ -64,7 +65,8 @@ public:
     
     // TODO: make this more similar to other calibration loops
     void start_anticogging_calibration();
-    bool anticogging_calibration(float pos_estimate, float vel_estimate);
+    void stop_anticogging_calibration();
+    void anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint);
 
     void update_filter_gains();
     bool update(float* torque_setpoint);
@@ -99,6 +101,8 @@ public:
     bool trajectory_done_ = true;
 
     bool anticogging_valid_ = false;
+
+    float anticogging_correction_pwr_ = 0.0f;
 
     // custom setters
     void set_input_pos(float value) { input_pos_ = value; input_pos_updated(); }

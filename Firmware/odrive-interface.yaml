@@ -724,6 +724,7 @@ interfaces:
       trajectory_done: readonly bool
       vel_integrator_torque: float32
       anticogging_valid: bool
+      anticogging_correction_pwr: float32
       config:
         c_is_class: False
         attributes:
@@ -786,10 +787,10 @@ interfaces:
               index: readonly uint32
               pre_calibrated: bool
               calib_anticogging: readonly bool
-              calib_pos_threshold: float32
-              calib_vel_threshold: float32
               cogging_ratio: readonly float32
               anticogging_enabled: bool
+              anticogging_integrator_gain: float32
+              anticogging_max_torque: float32
     functions:
       move_incremental:
         doc: Moves the axes' goal point by a specified increment.
@@ -801,6 +802,7 @@ interfaces:
             usually corresponds roughly to the current position of the axis.'
           }
       start_anticogging_calibration:
+      stop_anticogging_calibration:
 
 
   ODrive.Encoder:
