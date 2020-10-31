@@ -67,6 +67,7 @@ public:
     void start_anticogging_calibration();
     void stop_anticogging_calibration();
     void anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint);
+    void anticogging_remove_bias();
 
     void update_filter_gains();
     bool update(float* torque_setpoint);

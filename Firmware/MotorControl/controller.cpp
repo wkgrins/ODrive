@@ -72,29 +72,35 @@ void Controller::stop_anticogging_calibration() {
     config_.anticogging.calib_anticogging = false;
 }
 
+// find the mean of the anticogging map and subtract it from every bin
+void Controller::anticogging_remove_bias() {
+    float sum = 0.0f;
+    for (unsigned int i = 0; i < config_.anticogging.cogging_map_size; i++){
+        sum += config_.anticogging.cogging_map[i];
+    }
+    float mean = sum / config_.anticogging.cogging_map_size;
+    for (unsigned int i = 0; i < config_.anticogging.cogging_map_size; i++){
+        config_.anticogging.cogging_map[i] -= mean;
+    }
+}
+
 /*
  * This anticogging calibration uses integrator action to populate a cogging map
  * Takes approximately 10 minutes to run
- * Start at a higher anticogging_integrator_gain for a while, then move to a lower one
- * 
  */
 void Controller::anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint) {
-    // if anticogging is enabled, update the map continuously
-    // checks for velocity control etc? good idea
-    // inputs are: velocity_error, position from [0,1]
-    // modify anticogging map with an integrator gain
-    // set some variables for reporting
-    float vel_error = vel_setpoint - vel_estimate;
-    float pos_ratio = fmodf_pos(pos_estimate, 1.0f); // pos_circular not guaranteed to be [0,1)
-    float idxf = pos_ratio * config_.anticogging.cogging_map_size;
-    size_t idx = (size_t)idxf;
-    size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
-    // linear interpolation
-    float frac = idxf - (float)idx;
-    // not used here, but used later
-    // cogmap_current = (1.0f - frac) * config_.cogmap[idx] + frac * config_.cogmap[idx1];
     if (config_.anticogging.calib_anticogging && config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL) {
-    // actual anticogging calibration
+        float vel_error = vel_setpoint - vel_estimate;
+        float pos_single_turn = fmodf_pos(pos_estimate, 1.0f); // pos_circular not guaranteed to be [0,1)
+
+        // cogmap is discretized to 1024 bins. Linearly interpolate from wherever the motor actually is
+        // to the two appropriate mapping bins
+        float idxf = pos_single_turn * config_.anticogging.cogging_map_size;
+        size_t idx = (size_t)idxf;
+        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
+        float frac = idxf - (float)idx;
+
+        // Calculate cogmap effort and then discretize it
         float cogmap_correction_rate = config_.anticogging.anticogging_integrator_gain * vel_error;
         float cogmap_correction = cogmap_correction_rate * current_meas_period;
 
@@ -133,7 +139,7 @@ bool Controller::update(float* torque_setpoint_output) {
         input_pos_ = fmodf_pos(input_pos_, config_.circular_setpoint_range);
     }
 
-    float anticogging_pos = axis_->encoder_.pos_estimate_ / axis_->encoder_.getCoggingRatio();
+    float anticogging_pos;
 
     // Update inputs
     switch (config_.input_mode) {
@@ -214,7 +220,6 @@ bool Controller::update(float* torque_setpoint_output) {
     }
 
     // Calib_anticogging is only true when calibration is occurring, so we can't block anticogging_pos
-    
     if (config_.anticogging.calib_anticogging) {
         if (!axis_->encoder_.pos_estimate_valid_ || !axis_->encoder_.vel_estimate_valid_) {
             set_error(ERROR_INVALID_ESTIMATE);
@@ -295,16 +300,18 @@ bool Controller::update(float* torque_setpoint_output) {
 
     // Anti-cogging is enabled during calibration and afterwards
     // has to run live!
-
-    // TODO null ptr check for pos_estimate_linear
-    float pos_ratio = fmodf_pos(*pos_estimate_linear, 1.0f); // pos_circular not guaranteed to be [0,1)
-    float idxf = pos_ratio * config_.anticogging.cogging_map_size;
-    size_t idx = (size_t)idxf;
-    size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
-    // linear interpolation
-    float frac = idxf - (float)idx;
-    float cogmap_torque = (1.0f - frac) * config_.anticogging.cogging_map[idx] + frac * config_.anticogging.cogging_map[idx1];
     if (config_.anticogging.calib_anticogging || config_.anticogging.anticogging_enabled) {
+        if(!pos_estimate_linear) {
+                set_error(ERROR_INVALID_ESTIMATE);
+                return false;
+        }
+        float pos_ratio = fmodf_pos(*pos_estimate_linear, 1.0f);
+        float idxf = pos_ratio * config_.anticogging.cogging_map_size;
+        size_t idx = (size_t)idxf;
+        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
+        // linear interpolation
+        float frac = idxf - (float)idx;
+        float cogmap_torque = (1.0f - frac) * config_.anticogging.cogging_map[idx] + frac * config_.anticogging.cogging_map[idx1];
         torque += cogmap_torque;
     }
 
