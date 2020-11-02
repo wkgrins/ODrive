@@ -1,7 +1,6 @@
 
 #include "odrive_main.h"
 #include <algorithm>
-#include <numeric>
 
 bool Controller::apply_config() {
     config_.parent = this;
@@ -73,10 +72,14 @@ void Controller::stop_anticogging_calibration() {
 
 // find the mean of the anticogging map and subtract it from every bin
 void Controller::anticogging_remove_bias() {
-    auto& cogmap = config_.anticogging.cogging_map;
-    float mean = std::reduce(cogmap.begin(), cogmap.end(), 0.0f) / cogmap.size();
-    for(auto& val : cogmap)
-        val -= mean;
+    float sum = 0.0f;
+    for (unsigned int i = 0; i < config_.anticogging.cogging_map_size; i++){
+        sum += config_.anticogging.cogging_map[i];
+    }
+    float mean = sum / config_.anticogging.cogging_map_size;
+    for (unsigned int i = 0; i < config_.anticogging.cogging_map_size; i++){
+        config_.anticogging.cogging_map[i] -= mean;
+    }
 }
 
 /*
@@ -90,9 +93,9 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
 
         // cogmap is discretized to 1024 bins. Linearly interpolate from wherever the motor actually is
         // to the two appropriate mapping bins
-        float idxf = pos_single_turn * config_.anticogging.cogging_map.size();
+        float idxf = pos_single_turn * config_.anticogging.cogging_map_size;
         size_t idx = (size_t)idxf;
-        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
+        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
         float frac = idxf - (float)idx;
 
         // Calculate cogmap effort and then discretize it
@@ -301,9 +304,9 @@ bool Controller::update(float* torque_setpoint_output) {
                 return false;
         }
         float pos_ratio = fmodf_pos(*pos_estimate_linear, 1.0f);
-        float idxf = pos_ratio * config_.anticogging.cogging_map.size();
+        float idxf = pos_ratio * config_.anticogging.cogging_map_size;
         size_t idx = (size_t)idxf;
-        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
+        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map_size;
         // linear interpolation
         float frac = idxf - (float)idx;
         float cogmap_torque = (1.0f - frac) * config_.anticogging.cogging_map[idx] + frac * config_.anticogging.cogging_map[idx1];
