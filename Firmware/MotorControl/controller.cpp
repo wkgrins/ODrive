@@ -134,8 +134,6 @@ bool Controller::update(float* torque_setpoint_output) {
         input_pos_ = fmodf_pos(input_pos_, config_.circular_setpoint_range);
     }
 
-    float anticogging_pos;
-
     // Update inputs
     switch (config_.input_mode) {
         case INPUT_MODE_INACTIVE: {
@@ -205,7 +203,6 @@ bool Controller::update(float* torque_setpoint_output) {
                 torque_setpoint_ = traj_step.Ydd * config_.inertia;
                 axis_->trap_traj_.t_ += current_meas_period;
             }
-            anticogging_pos = pos_setpoint_; // FF the position setpoint instead of the pos_estimate
         } break;
         default: {
             set_error(ERROR_INVALID_INPUT_MODE);
@@ -214,7 +211,7 @@ bool Controller::update(float* torque_setpoint_output) {
         
     }
 
-    // Calib_anticogging is only true when calibration is occurring, so we can't block anticogging_pos
+    // Calib_anticogging is only true when calibration is occurring
     if (config_.anticogging.calib_anticogging) {
         if (!axis_->encoder_.pos_estimate_valid_ || !axis_->encoder_.vel_estimate_valid_) {
             set_error(ERROR_INVALID_ESTIMATE);
@@ -295,7 +292,7 @@ bool Controller::update(float* torque_setpoint_output) {
 
     // Anti-cogging is enabled during calibration and afterwards
     // has to run live!
-    if (config_.anticogging.calib_anticogging || config_.anticogging.anticogging_enabled) {
+    if (config_.anticogging.calib_anticogging || anticogging_valid_ && config_.anticogging.anticogging_enabled) {
         if(!pos_estimate_linear) {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;

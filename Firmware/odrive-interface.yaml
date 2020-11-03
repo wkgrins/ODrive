@@ -813,10 +813,8 @@ interfaces:
           anticogging:
             c_is_class: False
             attributes:
-              index: readonly uint32
               pre_calibrated: bool
               calib_anticogging: readonly bool
-              cogging_ratio: readonly float32
               anticogging_enabled: bool
               anticogging_integrator_gain: float32
               anticogging_max_torque: float32

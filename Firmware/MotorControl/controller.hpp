@@ -6,13 +6,11 @@
 class Controller : public ODriveIntf::ControllerIntf {
 public:
     struct Anticogging_t{
-        uint32_t index = 0;
         std::array<float, 1024> cogging_map = {0}; // [Nm]
         float anticogging_integrator_gain = 0.0f; // [Nm/s / (turns/s)]
         float anticogging_max_torque = 0.15f; // [Nm]
         bool pre_calibrated = false;
         bool calib_anticogging = false;
-        float cogging_ratio = 1.0f;
         bool anticogging_enabled = true;
     };
 
