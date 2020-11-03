@@ -1,13 +1,14 @@
 #ifndef __CONTROLLER_HPP
 #define __CONTROLLER_HPP
 
+#include <array>
+
 class Controller : public ODriveIntf::ControllerIntf {
 public:
     struct Anticogging_t{
         uint32_t index = 0;
-        float cogging_map[1024] = {0}; // [Nm]
+        std::array<float, 1024> cogging_map = {0}; // [Nm]
         float anticogging_integrator_gain = 0.0f; // [Nm/s / (turns/s)]
-        static constexpr size_t cogging_map_size = sizeof(cogging_map) / sizeof(cogging_map[0]);
         float anticogging_max_torque = 0.15f; // [Nm]
         bool pre_calibrated = false;
         bool calib_anticogging = false;
