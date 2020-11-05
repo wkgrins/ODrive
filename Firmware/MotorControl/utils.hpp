@@ -70,6 +70,7 @@ uint32_t timeout_to_deadline(uint32_t timeout_ms);
 int is_in_the_future(uint32_t time_ms);
 uint32_t micros(void);
 void delay_us(uint32_t us);
+float pdf(float sigma, float x);
 
 extern "C" {
 float our_arm_sin_f32(float x);

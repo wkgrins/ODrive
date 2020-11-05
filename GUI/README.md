@@ -38,5 +38,10 @@ npm run electron:serve
 npm run electron:build
 ```
 
+### Build all executables
+```
+npm run electron:build -- -mwl
+```
+
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).

@@ -191,7 +191,7 @@ def postVal(odrives, keyList, value, argType):
     # "key1" will be "odriveN"
     # like this: postVal(odrives, ["odrive0","axis0","config","calibration_lockin","accel"], 17.0)
     try:
-        #index = int(''.join([char for char in keyList.pop(0) if char.isnumeric()]))
+        #index = int(''.join([char for char in keyList.pop(0) if char.isnumeric()
         odrv = keyList.pop(0)
         RO = odrives[odrv]
         for key in keyList:

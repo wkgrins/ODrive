@@ -79,6 +79,19 @@ void Controller::anticogging_remove_bias() {
         val -= mean;
 }
 
+float Controller::anticogging_get_val(uint32_t index) {
+    if (index >= 0 && index < config_.anticogging.cogging_map.size()) {
+        return config_.anticogging.cogging_map[index];
+    }
+    return 0.0f;
+}
+
+void Controller::anticogging_set_val(uint32_t index, float val) {
+    if (index >= 0 && index < config_.anticogging.cogging_map.size()) {
+        config_.anticogging.cogging_map[index] = val;
+    }
+}
+
 /*
  * This anticogging calibration uses integrator action to populate a cogging map
  * Takes approximately 10 minutes to run
@@ -86,23 +99,52 @@ void Controller::anticogging_remove_bias() {
 void Controller::anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint) {
     if (config_.anticogging.calib_anticogging && config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL) {
         float vel_error = vel_setpoint - vel_estimate;
-        float pos_single_turn = fmodf_pos(pos_estimate, 1.0f); // pos_circular not guaranteed to be [0,1)
+        //pos_single_turn_old_ = pos_single_turn_;
+        pos_single_turn_ = fmodf_pos(pos_estimate, 1.0f); // pos_circular not guaranteed to be [0,1)
+        //float pos_diff = pos_single_turn_ - pos_single_turn_old_;
+
+        // check for error bounds from vel_setpoint for an entire turn
+        // if below THRESHOLD, calibration is done.
+        //anticog_err_max_ = std::max(anticog_err_max_, vel_error);
+        //anticog_err_min_ = std::min(anticog_err_min_, vel_error);
+
+        //if (pos_diff < -0.5f) {
+        //    // check to see if we're done
+        //    if ((anticog_err_max_ - anticog_err_min_) < (0.1f * vel_setpoint)) {
+        //        config_.anticogging.calib_anticogging = false;
+        //        input_vel_ = 0;
+        //    }
+        //    anticog_err_max_ = -std::numeric_limits<float>::infinity();
+        //    anticog_err_min_ = std::numeric_limits<float>::infinity();
+        //}
 
         // cogmap is discretized to 1024 bins. Linearly interpolate from wherever the motor actually is
         // to the two appropriate mapping bins
-        float idxf = pos_single_turn * config_.anticogging.cogging_map.size();
+        float idxf = pos_single_turn_ * config_.anticogging.cogging_map.size();
         size_t idx = (size_t)idxf;
-        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
+        //size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
         float frac = idxf - (float)idx;
 
         // Calculate cogmap effort and then discretize it
         float cogmap_correction_rate = config_.anticogging.anticogging_integrator_gain * vel_error;
         float cogmap_correction = cogmap_correction_rate * current_meas_period;
 
-        config_.anticogging.cogging_map[idx] += (1.0f - frac) * cogmap_correction;
-        config_.anticogging.cogging_map[idx1] += frac * cogmap_correction;
-        config_.anticogging.cogging_map[idx] = std::clamp(config_.anticogging.cogging_map[idx], -config_.anticogging.anticogging_max_torque, config_.anticogging.anticogging_max_torque);
-        config_.anticogging.cogging_map[idx1] = std::clamp(config_.anticogging.cogging_map[idx1], -config_.anticogging.anticogging_max_torque, config_.anticogging.anticogging_max_torque);
+        //config_.anticogging.cogging_map[idx] += (1.0f - frac) * cogmap_correction;
+        //config_.anticogging.cogging_map[idx1] += frac * cogmap_correction;
+        //config_.anticogging.cogging_map[idx] = std::clamp(config_.anticogging.cogging_map[idx], -config_.anticogging.anticogging_max_torque, config_.anticogging.anticogging_max_torque);
+        //config_.anticogging.cogging_map[idx1] = std::clamp(config_.anticogging.cogging_map[idx1], -config_.anticogging.anticogging_max_torque, config_.anticogging.anticogging_max_torque);
+
+        // apply anticogging with gaussian distribution
+        float width = 5;
+        for(int i = 0; i < (int)width; i++) {
+            int offset = (i - ((int)width) / 2);
+            float x = frac + (float)offset;
+            float sigma = width / 6.0f;
+            // 1% to 1% for pdf is roughly sigma * 6
+            float gaussVal = cogmap_correction * pdf(sigma, x);
+            config_.anticogging.cogging_map[(idx + offset) % config_.anticogging.cogging_map.size()] += std::clamp(gaussVal, -config_.anticogging.anticogging_max_torque, config_.anticogging.anticogging_max_torque);
+        }
+
         // RMS correction for reporting
         anticogging_correction_pwr_ += 0.001f * (cogmap_correction_rate*cogmap_correction_rate - anticogging_correction_pwr_);
     }
@@ -292,7 +334,7 @@ bool Controller::update(float* torque_setpoint_output) {
 
     // Anti-cogging is enabled during calibration and afterwards
     // has to run live!
-    if (config_.anticogging.calib_anticogging || anticogging_valid_ && config_.anticogging.anticogging_enabled) {
+    if (config_.anticogging.calib_anticogging || (anticogging_valid_ && config_.anticogging.anticogging_enabled)) {
         if(!pos_estimate_linear) {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;

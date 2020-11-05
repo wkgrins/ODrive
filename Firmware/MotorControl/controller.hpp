@@ -12,6 +12,8 @@ public:
         bool pre_calibrated = false;
         bool calib_anticogging = false;
         bool anticogging_enabled = true;
+        float sigma = 1.0f;
+        float width = 14.0f;
     };
 
     struct Config_t {
@@ -67,6 +69,8 @@ public:
     void stop_anticogging_calibration();
     void anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint);
     void anticogging_remove_bias();
+    float anticogging_get_val(uint32_t index);
+    void anticogging_set_val(uint32_t index, float val);
 
     void update_filter_gains();
     bool update(float* torque_setpoint);
@@ -103,6 +107,10 @@ public:
     bool anticogging_valid_ = false;
 
     float anticogging_correction_pwr_ = 0.0f;
+    float anticog_err_min_ = std::numeric_limits<float>::infinity();
+    float anticog_err_max_ = -std::numeric_limits<float>::infinity();
+    float pos_single_turn_ = 0.0f;
+    float pos_single_turn_old_ = 0.0f;
 
     // custom setters
     void set_input_pos(float value) { input_pos_ = value; input_pos_updated(); }

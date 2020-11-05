@@ -831,6 +831,11 @@ interfaces:
       start_anticogging_calibration:
       stop_anticogging_calibration:
       anticogging_remove_bias:
+      anticogging_get_val: {in: {index: uint32}, out: {val: float32}}
+      anticogging_set_val:
+        in:
+          index: {type: uint32}
+          val: {type: float32}
 
 
   ODrive.Encoder:

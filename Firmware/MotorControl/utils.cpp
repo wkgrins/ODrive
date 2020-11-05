@@ -188,3 +188,9 @@ void delay_us(uint32_t us)
     }
 }
 
+// @brief: computes value of probability density function at input x with sigma
+float pdf(float sigma, float x) {
+    float expInput = (-1.0f / 2.0f) * (x*x) / (sigma*sigma);
+    float divisor = sigma * sqrtf(2.0f * M_PI);
+    return expf(expInput) / divisor;
+}
