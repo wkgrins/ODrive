@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <array>
 #include <tuple>
+#include <cmath>
 
 /**
  * @brief Flash size register address
@@ -156,18 +157,36 @@ inline int mod(const int dividend, const int divisor){
     return r;
 }
 
-typedef struct{
-    std::array<float,512> data;
-    float start;
-    float end;
-} lookup_table_t;
+template <size_t N>
+struct lookup_table_t{
+    std::array<float,N> data{};
+    float start = 0.0f;
+    float stop = 0.0f;
+};
 
-extern lookup_table_t pdf_table;
+// for other tables, use a different function to populate it correctly
+template <size_t N> 
+constexpr lookup_table_t<N> gauss_table(float start, float stop)
+{
+    lookup_table_t<N> table;
+    table.start = start;
+    table.stop = stop;
+    for(size_t i = 0; i < N; i++) {
+        float x = (float)i / (float)(N-1) * (start-stop);
+        float expval = -0.5f * x * x;
+        float divisor = std::sqrt(2.0f * M_PI);
+        table.data[i] = std::exp(expval)/divisor;
+    }
+    return table;
+}
 
-// assumes a lookup table that is symmetric across x=0
-inline float interpolate(float x, lookup_table_t& table) {
-    if ((x > -table.end) && (x < table.end)) {
-        float idxf = x / (table.end-table.start) * (float)table.data.size();
+// create our gaussian lookup table, with 512 points, starting at x = 0.0 and ending at x = 4.0
+static constexpr auto pdf_table = gauss_table<512>(0.0f,4.0f);
+
+template <size_t N>
+inline float constexpr interpolate(float x, const lookup_table_t<N>& table) {
+    if ((x > -table.stop) && (x < table.stop)) {
+        float idxf = x / (table.stop-table.start) * (float)table.data.size();
         int idx = (int)idxf;
         int idx1 = idx + 1;
         float frac = idxf - (float)idx;
@@ -192,5 +211,5 @@ inline float interpolate(float x, lookup_table_t& table) {
 }
 
 inline float pdf(float sigma, float x) {
-    return interpolate(x / sigma, pdf_table) / sigma;
+    return interpolate<pdf_table.data.size()>(x / sigma, pdf_table) / sigma;
 }
