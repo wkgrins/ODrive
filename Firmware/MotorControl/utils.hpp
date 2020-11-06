@@ -70,7 +70,6 @@ uint32_t timeout_to_deadline(uint32_t timeout_ms);
 int is_in_the_future(uint32_t time_ms);
 uint32_t micros(void);
 void delay_us(uint32_t us);
-float pdf(float sigma, float x);
 
 extern "C" {
 float our_arm_sin_f32(float x);
@@ -155,4 +154,43 @@ inline int mod(const int dividend, const int divisor){
     int r = dividend % divisor;
     if (r < 0) r += divisor;
     return r;
+}
+
+typedef struct{
+    std::array<float,512> data;
+    float start;
+    float end;
+} lookup_table_t;
+
+extern lookup_table_t pdf_table;
+
+// assumes a lookup table that is symmetric across x=0
+inline float interpolate(float x, lookup_table_t& table) {
+    if ((x > -table.end) && (x < table.end)) {
+        float idxf = x / (table.end-table.start) * (float)table.data.size();
+        int idx = (int)idxf;
+        int idx1 = idx + 1;
+        float frac = idxf - (float)idx;
+        float val0, val1 = 0;
+        if (idx < 0){
+            val0 = table.data[-idx];
+        }
+        else {
+            val0 = table.data[idx];
+        }
+        if (idx1 < 0){
+            val1 = table.data[-idx1];
+        }
+        else {
+            val1 = table.data[idx];
+        }
+        return (1.0f - frac) * val0 + frac * val1;
+    }
+    else {
+        return table.data.back();
+    }
+}
+
+inline float pdf(float sigma, float x) {
+    return interpolate(x / sigma, pdf_table) / sigma;
 }
