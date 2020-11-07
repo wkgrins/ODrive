@@ -854,6 +854,7 @@ interfaces:
       vel_integrator_torque: float32
       anticogging_valid: bool
       anticogging_correction_pwr: float32
+      anticogging_average_error: readonly float32
       config:
         c_is_class: False
         attributes:
@@ -916,9 +917,12 @@ interfaces:
               pre_calibrated: bool
               calib_anticogging: readonly bool
               anticogging_enabled: bool
-              anticogging_integrator_gain: float32
-              anticogging_max_torque: float32
+              integrator_gain: float32
+              max_torque: float32
               width: float32
+              start_vel: float32
+              end_vel: float32
+              end_tolerance: float32
     functions:
       move_incremental:
         doc: Moves the axes' goal point by a specified increment.

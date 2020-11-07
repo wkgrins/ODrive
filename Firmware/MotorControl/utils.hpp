@@ -174,7 +174,7 @@ constexpr lookup_table_t<N> gauss_table(float start, float stop)
     for(size_t i = 0; i < N; i++) {
         float x = (float)i / (float)(N-1) * (start-stop);
         float expval = -0.5f * x * x;
-        float divisor = std::sqrt(2.0f * M_PI);
+        float divisor = __builtin_sqrtf(2.0f * M_PI);
         table.data[i] = std::exp(expval)/divisor;
     }
     return table;
@@ -210,6 +210,6 @@ inline float constexpr interpolate(float x, const lookup_table_t<N>& table) {
     }
 }
 
-inline float pdf(float sigma, float x) {
+constexpr float pdf(float sigma, float x) {
     return interpolate<pdf_table.data.size()>(x / sigma, pdf_table) / sigma;
 }

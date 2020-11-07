@@ -6,7 +6,7 @@ ODrive supports an anti-cogging algorithm that attempts to compensate for the ra
 
 Name | Type | Use
 -- | -- | --
-anticogging_integrator_gain | float | Integrator gain used during anticogging
+integrator_gain | float | Integrator gain used during anticogging
 anticogging_max_torque | float | Max torque that the anticogging map can apply.
 pre_calibrated | bool | If true and using index or absolute encoder, load anticogging map from NVM at startup
 calib_anticogging | bool | True when calibration is ongoing
