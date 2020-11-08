@@ -45,18 +45,19 @@ void Controller::move_incremental(float displacement, bool from_input_pos = true
 }
 
 
-// set velocity to start, make note of starting position, set starting width wide enough to capture lowest cogging harmonics.
 void Controller::start_anticogging_calibration() {
     if (axis_->error_ == Axis::ERROR_NONE) {
         input_vel_ = config_.anticogging.start_vel;
         anticogging_start_pos = *axis_->encoder_.pos_estimate_.get_current();
-        //config_.anticogging.width = 1.0f / (2.0f * (float)axis_->motor_.config_.pole_pairs);
         old_vel_integrator_gain = config_.vel_integrator_gain;
         config_.anticogging.integrator_gain = 25.0f * config_.vel_integrator_gain;
+        config_.anticogging.bandwidth = config_.anticogging.start_vel / 0.8f;
+        // reset
         config_.vel_integrator_gain = 0.0f;
         anticogging_average_error_ = 0.0f;
         anticogging_average_error_old_ = 0.0f;
         anticogging_turn_count_ = 0;
+        config_.anticogging.vel_error_filtered = 0.0f;
         config_.anticogging.calib_anticogging = true;
     }
 }
@@ -95,12 +96,16 @@ void Controller::anticogging_set_val(uint32_t index, float val) {
 void Controller::anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint) {
     if (config_.anticogging.calib_anticogging && config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL) {
         float vel_error = vel_setpoint - vel_estimate;
+        config_.anticogging.vel_error_filtered += 10.0f * current_meas_period * (vel_error - config_.anticogging.vel_error_filtered);
         float pos_single_turn_ = fmodf_pos(pos_estimate, 1.0f); // pos_circular not guaranteed to be [0,1)
 
         // termination condition is average error being within 0.5% across turns and having done over 10 turns.
         bool done = false;
         if ((((int)(pos_estimate - anticogging_start_pos)) != anticogging_turn_count_) && (anticogging_turn_count_ > 0)) {
-            if (std::abs(anticogging_average_error_ - anticogging_average_error_old_) / anticogging_average_error_ < 0.005f && anticogging_turn_count_ > 10) {
+            //if (std::abs(anticogging_average_error_ - anticogging_average_error_old_) / anticogging_average_error_ < 0.001f && anticogging_turn_count_ > 10) {
+            //    done = true;
+            //}
+            if ((input_vel_ < 1.10f * config_.anticogging.end_vel) && anticogging_turn_count_ > 10) {
                 done = true;
             }
             anticogging_average_error_old_ = anticogging_average_error_;
@@ -109,23 +114,33 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         
         // do at least one complete turn before reducing the width, gain, and speed
         bool one_turn = anticogging_turn_count_ > 0;
-        float filter_bw = 0.00005f;// + (-0.00001f * (float)std::min(anticogging_turn_count_,20) / 20.0f);
-        anticogging_average_error_ += filter_bw * (std::abs(vel_error)/input_vel_ - anticogging_average_error_);
-        float width = 1024.0f/64.0f; //config_.anticogging.width * config_.anticogging.cogging_map.size();
+        anticogging_average_error_ += config_.anticogging.bandwidth * current_meas_period * (std::abs(config_.anticogging.vel_error_filtered)/input_vel_ - anticogging_average_error_);
+        float width = (float)config_.anticogging.cogging_map.size()/64.0f; //config_.anticogging.width * config_.anticogging.cogging_map.size();
 
         if (one_turn) {
-            // reduce gain and speed proportionally
             float range = anticog_err_max_ - config_.anticogging.end_tolerance;
             float scale_factor = std::clamp((anticogging_average_error_ - config_.anticogging.end_tolerance) / range, 0.0f, 1.0f); // from 0 to 1
 
-            // scale speed, width, and integrator gain
+            // scale gain, speed, width, and error filter bandwidth
             // start at 25x vel int gain, end at 5x vel int gain
             config_.anticogging.integrator_gain = scale_factor * (20.0f * old_vel_integrator_gain) + 5.0f * old_vel_integrator_gain;
-            input_vel_ = scale_factor * (config_.anticogging.start_vel - config_.anticogging.end_vel) + config_.anticogging.end_vel;
-            // we want this to be 3.0f
-            float end_width = 5.0f/1024.0f;
-            float start_width = 1.0f / 64.0f;//1.0f / (2.0f * (float)axis_->motor_.config_.pole_pairs);
-            width = 1024.0f * scale_factor * (start_width - end_width) + end_width;
+
+            // need some space between error changing and there parameters changing. Filter applied to them also.
+            float new_vel = scale_factor * (config_.anticogging.start_vel - config_.anticogging.end_vel) + config_.anticogging.end_vel;
+            input_vel_ += 1.0f * current_meas_period * (new_vel - input_vel_);
+            
+            // width is what fraction of the cogging map we do the gaussian broadcast to
+            // ideally this should track something like pole_pairs, but it crashes if there are too many calls.
+            float end_width = 5.0f / (float)config_.anticogging.cogging_map.size();
+            float start_width = 16.0f / (float)config_.anticogging.cogging_map.size();
+            float new_width = (float)config_.anticogging.cogging_map.size() * scale_factor * (start_width - end_width) + end_width;
+            width += 1.0f * current_meas_period * (new_width - width);
+
+            // The filter should scale with velocity to present a good error measure across different speds
+            float end_bandwidth = config_.anticogging.end_vel / 4.0f;
+            float start_bandwidth = config_.anticogging.start_vel / 2.0f;
+            float new_bandwidth = scale_factor * (start_bandwidth - end_bandwidth) + end_bandwidth;
+            config_.anticogging.bandwidth += 1.0f * current_meas_period * (new_bandwidth - config_.anticogging.bandwidth);
         }
         else {
             // find our max error to use for proportionally reducing gains
@@ -145,8 +160,8 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         for(int i = 0; i < (int)width; i++) {
             int offset = (i - ((int)width) / 2);
             float x = frac + (float)offset;
-            float sigma = width / 6.0f;
             // 1% to 1% for pdf is roughly sigma * 6
+            float sigma = width / 6.0f;
             float gaussVal = cogmap_correction * pdf(sigma, x);
             config_.anticogging.cogging_map[(idx + offset) % config_.anticogging.cogging_map.size()] += std::clamp(gaussVal, -config_.anticogging.max_torque, config_.anticogging.max_torque);
         }

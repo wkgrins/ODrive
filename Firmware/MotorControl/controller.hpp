@@ -16,6 +16,8 @@ public:
         float start_vel = 0.5f; // [turns/s]
         float end_vel = 0.04f; // [turns/s]
         float end_tolerance = 0.21f; // threshold for average abs vel error to end anticogging
+        float bandwidth = 0.4f; // [rad/s]
+        float vel_error_filtered = 0.0f;
     };
 
     struct Config_t {

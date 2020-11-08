@@ -923,6 +923,7 @@ interfaces:
               start_vel: float32
               end_vel: float32
               end_tolerance: float32
+              bandwidth: float32
     functions:
       move_incremental:
         doc: Moves the axes' goal point by a specified increment.
