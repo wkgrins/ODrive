@@ -919,11 +919,11 @@ interfaces:
               anticogging_enabled: bool
               integrator_gain: float32
               max_torque: float32
-              width: float32
+              width: readonly float32
               start_vel: float32
               end_vel: float32
               end_tolerance: float32
-              bandwidth: float32
+              bandwidth: readonly float32
     functions:
       move_incremental:
         doc: Moves the axes' goal point by a specified increment.

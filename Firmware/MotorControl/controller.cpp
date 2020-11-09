@@ -102,9 +102,6 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         // termination condition is average error being within 0.5% across turns and having done over 10 turns.
         bool done = false;
         if ((((int)(pos_estimate - anticogging_start_pos)) != anticogging_turn_count_) && (anticogging_turn_count_ > 0)) {
-            //if (std::abs(anticogging_average_error_ - anticogging_average_error_old_) / anticogging_average_error_ < 0.001f && anticogging_turn_count_ > 10) {
-            //    done = true;
-            //}
             if ((input_vel_ < 1.10f * config_.anticogging.end_vel) && anticogging_turn_count_ > 10) {
                 done = true;
             }
