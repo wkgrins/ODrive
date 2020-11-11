@@ -13,8 +13,8 @@ public:
         bool calib_anticogging = false;
         bool anticogging_enabled = true;
         float start_vel = 0.5f; // [turns/s]
-        float end_vel = 0.04f; // [turns/s]
-        float end_tolerance = 0.21f; // threshold for average abs vel error to end anticogging
+        float end_vel = 0.05f; // [turns/s]
+        float end_tolerance = 0.1f; // threshold for average abs vel error to end anticogging
         float bandwidth = 0.4f; // [rad/s]
         float vel_error_filtered = 0.0f;
     };
@@ -107,7 +107,7 @@ public:
 
     bool anticogging_valid_ = false;
 
-    float anticog_err_max_ = -std::numeric_limits<float>::infinity();
+    float anticogging_error_max_ = -std::numeric_limits<float>::infinity();
     float anticogging_average_error_ = 0.0f;
     float anticogging_start_pos = 0.0f;
     float old_vel_integrator_gain = 0.0f;

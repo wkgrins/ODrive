@@ -45,7 +45,7 @@ void Controller::move_incremental(float displacement, bool from_input_pos = true
 }
 
 void Controller::start_anticogging_calibration() {
-    if (axis_->error_ == Axis::ERROR_NONE) {
+    if (axis_->error_ == Axis::ERROR_NONE && axis_->current_state_ == Axis::AXIS_STATE_CLOSED_LOOP_CONTROL) {
         input_vel_ = config_.anticogging.start_vel;
         anticogging_start_pos = *axis_->encoder_.pos_estimate_.get_current();
         old_vel_integrator_gain = config_.vel_integrator_gain;
@@ -58,7 +58,7 @@ void Controller::start_anticogging_calibration() {
         anticogging_turn_count_ = 0;
         config_.anticogging.vel_error_filtered = 0.0f;
         config_.anticogging.calib_anticogging = true;
-        anticog_err_max_ = -std::numeric_limits<float>::infinity();
+        anticogging_error_max_ = -std::numeric_limits<float>::infinity();
     }
 }
 
@@ -93,7 +93,9 @@ void Controller::anticogging_set_val(uint32_t index, float val) {
  * This anticogging calibration uses integrator action to populate a cogging map
  */
 void Controller::anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint) {
-    if (config_.anticogging.calib_anticogging && config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL) {
+    if (config_.anticogging.calib_anticogging && 
+        config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL && 
+        axis_->current_state_ == Axis::AXIS_STATE_CLOSED_LOOP_CONTROL) {
         float vel_error = vel_setpoint - vel_estimate;
 
         // vel_estimate has a lot of jitter at low speeds, we want to smooth that over before calculating average absolute error
@@ -121,7 +123,7 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         float width = (float)config_.anticogging.cogging_map.size()/64.0f;
 
         if (one_turn) {
-            float range = anticog_err_max_ - config_.anticogging.end_tolerance;
+            float range = anticogging_error_max_ - config_.anticogging.end_tolerance;
 
             if (range < 0.0f) {
                 done = true;
@@ -135,7 +137,9 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
 
             // need some space between error changing and these parameters changing. Filter applied to them also.
             float new_vel = scale_factor * (config_.anticogging.start_vel - config_.anticogging.end_vel) + config_.anticogging.end_vel;
-            input_vel_ += 1.0f * current_meas_period * (new_vel - input_vel_);
+            if (new_vel < input_vel_){
+                input_vel_ += 1.0f * current_meas_period * (new_vel - input_vel_);
+            }
             
             // width is what fraction of the cogging map we do the gaussian broadcast to
             // ideally this should track something like pole_pairs, but it crashes if there are too many calls.
@@ -152,7 +156,7 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         }
         else {
             // find our max error to use for proportionally reducing gains
-            anticog_err_max_ = std::max(anticog_err_max_, anticogging_average_error_);
+            anticogging_error_max_ = std::max(anticogging_error_max_, anticogging_average_error_);
         }
 
         // used for calculating the right x in call to pdf
@@ -180,6 +184,10 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
             //Controller::anticogging_remove_bias();
             config_.anticogging.pre_calibrated = true;
         }
+    }
+    else {
+        Controller::stop_anticogging_calibration();
+        config_.anticogging.pre_calibrated = false;
     }
 }
 
