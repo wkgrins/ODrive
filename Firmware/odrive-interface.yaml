@@ -855,6 +855,7 @@ interfaces:
       anticogging_valid: readonly bool
       anticogging_average_error: readonly float32
       anticogging_turn_count: readonly int32
+      anticog_err_max: readonly float32
       config:
         c_is_class: False
         attributes:

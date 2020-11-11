@@ -122,6 +122,11 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
 
         if (one_turn) {
             float range = anticog_err_max_ - config_.anticogging.end_tolerance;
+
+            if (range < 0.0f) {
+                done = true;
+            }
+            
             float scale_factor = std::clamp((anticogging_average_error_ - config_.anticogging.end_tolerance) / range, 0.0f, 1.0f); // from 0 to 1
 
             // scale gain, speed, width, and error filter bandwidth
