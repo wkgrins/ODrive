@@ -852,9 +852,9 @@ interfaces:
       torque_setpoint: readonly float32
       trajectory_done: readonly bool
       vel_integrator_torque: float32
-      anticogging_valid: bool
-      anticogging_correction_pwr: float32
+      anticogging_valid: readonly bool
       anticogging_average_error: readonly float32
+      anticogging_turn_count: readonly int32
       config:
         c_is_class: False
         attributes:
@@ -917,9 +917,8 @@ interfaces:
               pre_calibrated: bool
               calib_anticogging: readonly bool
               anticogging_enabled: bool
-              integrator_gain: float32
+              integrator_gain: readonly float32
               max_torque: float32
-              width: readonly float32
               start_vel: float32
               end_vel: float32
               end_tolerance: float32

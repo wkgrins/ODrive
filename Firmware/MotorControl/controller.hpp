@@ -12,7 +12,6 @@ public:
         bool pre_calibrated = false;
         bool calib_anticogging = false;
         bool anticogging_enabled = true;
-        float width = 1.0f / 64.0f; // how much of the cogmap is updated per sample
         float start_vel = 0.5f; // [turns/s]
         float end_vel = 0.04f; // [turns/s]
         float end_tolerance = 0.21f; // threshold for average abs vel error to end anticogging
@@ -108,14 +107,11 @@ public:
 
     bool anticogging_valid_ = false;
 
-    float anticogging_correction_pwr_ = 0.0f;
-    float anticog_err_min_ = std::numeric_limits<float>::infinity();
     float anticog_err_max_ = -std::numeric_limits<float>::infinity();
     float anticogging_average_error_ = 0.0f;
-    float anticogging_average_error_old_ = 0.0f;
     float anticogging_start_pos = 0.0f;
     float old_vel_integrator_gain = 0.0f;
-    int anticogging_turn_count_ = 0;
+    int32_t anticogging_turn_count_ = 0;
     // Outputs
     OutputPort<float> torque_output_ = 0.0f;
 
