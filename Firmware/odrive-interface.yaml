@@ -853,9 +853,14 @@ interfaces:
       trajectory_done: readonly bool
       vel_integrator_torque: float32
       anticogging_valid: readonly bool
-      anticogging_average_error: readonly float32
-      anticogging_turn_count: readonly int32
       anticogging_error_max: readonly float32
+      anticogging_average_error: readonly float32
+      anticogging_start_pos: readonly float32
+      old_vel_integrator_gain: readonly float32
+      anticogging_turn_count: readonly int32
+      anticogging_vel_error_filtered: readonly float32
+      anticogging_integrator_gain: readonly float32
+      anticogging_bandwidth: readonly float32
       config:
         c_is_class: False
         attributes:
@@ -918,12 +923,12 @@ interfaces:
               pre_calibrated: bool
               calib_anticogging: readonly bool
               anticogging_enabled: bool
-              integrator_gain: readonly float32
               max_torque: float32
               start_vel: float32
               end_vel: float32
+              start_gain: float32
+              end_gain: float32
               end_tolerance: float32
-              bandwidth: readonly float32
     functions:
       move_incremental:
         doc: Moves the axes' goal point by a specified increment.
