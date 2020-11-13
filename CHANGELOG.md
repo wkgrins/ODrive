@@ -6,7 +6,7 @@ Please add a note of your changes below this heading if you make a Pull Request.
 * Support for UART1 on GPIO3 and GPIO4. UART0 (on GPIO1/2) and UART1 can currently not be enabled at the same time.
 
 ### Changed
-* changed anticogging to the new method. Added new parameters to `controller.config.anticogging`, added new function `stop_anticogging_calibration()`
+* Changed anticogging to use an automatic velocity-based calibration method. Added new parameters to `controller.config.anticogging`, added new function `stop_anticogging_calibration()`, see `controller.hpp` for changes.
 * Modified encoder offset calibration to work correctly when calib_scan_distance is not a multiple of 4pi
 * Moved thermistors from being a top level object to belonging to Motor objects. Also changed errors: thermistor errors rolled into motor errors
 * Use DMA for DRV8301 setup

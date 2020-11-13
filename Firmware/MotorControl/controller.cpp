@@ -70,22 +70,22 @@ void Controller::stop_anticogging_calibration() {
 
 // find the mean of the anticogging map and subtract it from every bin
 void Controller::anticogging_remove_bias() {
-    auto& cogmap = config_.anticogging.cogging_map;
+    auto& cogmap = config_.anticogging.cogging_map.data;
     float mean = std::accumulate(cogmap.begin(), cogmap.end(), 0.0f) / cogmap.size();
     for(auto& val : cogmap)
         val -= mean;
 }
 
 float Controller::anticogging_get_val(uint32_t index) {
-    if (index >= 0 && index < config_.anticogging.cogging_map.size()) {
-        return config_.anticogging.cogging_map[index];
+    if (index >= 0 && index < config_.anticogging.cogging_map.data.size()) {
+        return config_.anticogging.cogging_map.data[index];
     }
     return 0.0f;
 }
 
 void Controller::anticogging_set_val(uint32_t index, float val) {
-    if (index >= 0 && index < config_.anticogging.cogging_map.size()) {
-        config_.anticogging.cogging_map[index] = val;
+    if (index >= 0 && index < config_.anticogging.cogging_map.data.size()) {
+        config_.anticogging.cogging_map.data[index] = val;
     }
 }
 
@@ -119,7 +119,7 @@ void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, floa
         anticogging_average_error_ +=   anticogging_bandwidth_ * current_meas_period * 
                                         (std::abs(anticogging_vel_error_filtered_)/input_vel_ - anticogging_average_error_);
 
-        float width = (float)config_.anticogging.cogging_map.size()/64.0f;
+        float width = (float)config_.anticogging.cogging_map.data.size()/64.0f;
 
         // input_vel can sometimes change too quickly, try a ramp limiter on it to prevent sudden drops
         // max dv/dt = (start_vel - end_vel) / (30 seconds)?
@@ -154,9 +154,9 @@ void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, floa
             
             // width is what fraction of the cogging map we do the gaussian broadcast to
             // ideally this should track something like pole_pairs, but it crashes if there are too many calls.
-            float end_width = 5.0f / (float)config_.anticogging.cogging_map.size();
-            float start_width = 16.0f / (float)config_.anticogging.cogging_map.size();
-            float new_width = (float)config_.anticogging.cogging_map.size() * scale_factor * (start_width - end_width) + end_width;
+            float end_width = 5.0f / (float)config_.anticogging.cogging_map.data.size();
+            float start_width = 16.0f / (float)config_.anticogging.cogging_map.data.size();
+            float new_width = (float)config_.anticogging.cogging_map.data.size() * scale_factor * (start_width - end_width) + end_width;
             width += 1.0f * current_meas_period * (new_width - width);
 
             // The filter should scale with velocity to present a good error measure across different speds
@@ -171,7 +171,7 @@ void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, floa
         }
 
         // used for calculating the right x in call to pdf
-        float idxf = pos_cpr * config_.anticogging.cogging_map.size();
+        float idxf = pos_cpr * config_.anticogging.cogging_map.data.size();
         size_t idx = (size_t)idxf;
         float frac = idxf - (float)idx;
 
@@ -186,7 +186,7 @@ void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, floa
             // 1% to 1% for pdf is roughly sigma * 6
             float sigma = width / 6.0f;
             float gaussVal = cogmap_correction * pdf(sigma, x);
-            config_.anticogging.cogging_map[(idx + offset) % config_.anticogging.cogging_map.size()] += std::clamp(gaussVal, -config_.anticogging.max_torque, config_.anticogging.max_torque);
+            config_.anticogging.cogging_map.data[(idx + offset) % config_.anticogging.cogging_map.data.size()] += std::clamp(gaussVal, -config_.anticogging.max_torque, config_.anticogging.max_torque);
         }
 
         // exit condition
@@ -400,13 +400,7 @@ bool Controller::update() {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;
         }
-        float idxf = *anticogging_pos_estimate * config_.anticogging.cogging_map.size();
-        size_t idx = (size_t)idxf;
-        size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
-        // linear interpolation
-        float frac = idxf - (float)idx;
-        float cogmap_torque = (1.0f - frac) * config_.anticogging.cogging_map[idx] + frac * config_.anticogging.cogging_map[idx1];
-        torque += cogmap_torque;
+        torque += interpolate(*anticogging_pos_estimate, config_.anticogging.cogging_map);
     }
 
     float v_err = 0.0f;
