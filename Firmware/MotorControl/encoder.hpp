@@ -101,6 +101,7 @@ public:
     OutputPort<float> pos_estimate_ = 0.0f; // [turn]
     OutputPort<float> vel_estimate_ = 0.0f; // [turn/s]
     OutputPort<float> pos_circular_ = 0.0f; // [turn]
+    OutputPort<float> pos_cpr_ = 0.0f;      // [turn]
 
     bool pos_estimate_valid_ = false;
     bool vel_estimate_valid_ = false;

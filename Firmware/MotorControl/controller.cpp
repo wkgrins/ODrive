@@ -220,7 +220,7 @@ bool Controller::update() {
     std::optional<float> pos_wrap = pos_wrap_src_.get_current();
     std::optional<float> vel_estimate = vel_estimate_src_.get_current();
 
-    std::optional<float> anticogging_pos_estimate = pos_estimate_circular;
+    std::optional<float> anticogging_pos_estimate = axis_->encoder_.pos_cpr_.get_current();
     std::optional<float> anticogging_vel_estimate = vel_estimate;
 
     // TODO also enable circular deltas for 2nd order filter, etc.
