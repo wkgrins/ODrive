@@ -92,7 +92,7 @@ void Controller::anticogging_set_val(uint32_t index, float val) {
 /*
  * This anticogging calibration uses integrator action to populate a cogging map
  */
-void Controller::anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint) {
+void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, float vel_estimate, float vel_setpoint) {
     if (config_.anticogging.calib_anticogging && 
         config_.control_mode == CONTROL_MODE_VELOCITY_CONTROL && 
         axis_->current_state_ == Axis::AXIS_STATE_CLOSED_LOOP_CONTROL) {
@@ -100,9 +100,6 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
 
         // vel_estimate has a lot of jitter at low speeds, we want to smooth that over before calculating average absolute error
         anticogging_vel_error_filtered_ += 10.0f * current_meas_period * (vel_error - anticogging_vel_error_filtered_);
-
-        // pos_circular not guaranteed to be [0,1)
-        float pos_single_turn_ = fmodf_pos(pos_estimate, 1.0f);
 
         // termination condition is input_vel being within 10% of end_vel and having done over 10 turns.
         // input_vel_ has a few layers of filtering applied, so it's a good measure of "done-ness"
@@ -174,7 +171,7 @@ void Controller::anticogging_calibration(float pos_estimate, float vel_estimate,
         }
 
         // used for calculating the right x in call to pdf
-        float idxf = pos_single_turn_ * config_.anticogging.cogging_map.size();
+        float idxf = pos_cpr * config_.anticogging.cogging_map.size();
         size_t idx = (size_t)idxf;
         float frac = idxf - (float)idx;
 
@@ -223,8 +220,8 @@ bool Controller::update() {
     std::optional<float> pos_wrap = pos_wrap_src_.get_current();
     std::optional<float> vel_estimate = vel_estimate_src_.get_current();
 
-    std::optional<float> anticogging_pos_estimate = axis_->encoder_.pos_estimate_.get_current();
-    std::optional<float> anticogging_vel_estimate = axis_->encoder_.vel_estimate_.get_current();
+    std::optional<float> anticogging_pos_estimate = pos_estimate_circular;
+    std::optional<float> anticogging_vel_estimate = vel_estimate;
 
     // TODO also enable circular deltas for 2nd order filter, etc.
     if (config_.circular_setpoints) {
@@ -319,12 +316,12 @@ bool Controller::update() {
 
     // Calib_anticogging is only true when calibration is occurring
     if (config_.anticogging.calib_anticogging) {
-        if (!anticogging_pos_estimate.has_value() || !anticogging_vel_estimate.has_value()) {
+        if (!anticogging_pos_estimate.has_value() || !anticogging_vel_estimate.has_value() || !pos_estimate_linear.has_value()) {
             set_error(ERROR_INVALID_ESTIMATE);
             return false;
         }
         // non-blocking
-        anticogging_calibration(*anticogging_pos_estimate, *anticogging_vel_estimate, vel_setpoint_);
+        anticogging_calibration(*pos_estimate_linear, *anticogging_pos_estimate, *anticogging_vel_estimate, vel_setpoint_);
     }
 
     // Position control
@@ -399,12 +396,11 @@ bool Controller::update() {
     // Anti-cogging is enabled during calibration and afterwards
     // has to run live!
     if (config_.anticogging.calib_anticogging || (anticogging_valid_ && config_.anticogging.anticogging_enabled)) {
-        if(!pos_estimate_linear.has_value()) {
+        if(!anticogging_pos_estimate.has_value()) {
                 set_error(ERROR_INVALID_ESTIMATE);
                 return false;
         }
-        float pos_ratio = fmodf_pos(*pos_estimate_linear, 1.0f);
-        float idxf = pos_ratio * config_.anticogging.cogging_map.size();
+        float idxf = *anticogging_pos_estimate * config_.anticogging.cogging_map.size();
         size_t idx = (size_t)idxf;
         size_t idx1 = (idx + 1) % config_.anticogging.cogging_map.size();
         // linear interpolation

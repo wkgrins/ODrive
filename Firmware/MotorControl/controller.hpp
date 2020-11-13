@@ -15,7 +15,7 @@ public:
         float end_vel = 0.05f; // [turns/s]
         float start_gain = 25.0f;
         float end_gain = 5.0f;
-        float end_tolerance = 0.1f; // threshold for average abs vel error to end anticogging
+        float end_tolerance = 0.06f; // threshold for average abs vel error to end anticogging
     };
 
     struct Config_t {
@@ -69,7 +69,7 @@ public:
     // TODO: make this more similar to other calibration loops
     void start_anticogging_calibration();
     void stop_anticogging_calibration();
-    void anticogging_calibration(float pos_estimate, float vel_estimate, float vel_setpoint);
+    void anticogging_calibration(float pos_estimate, float pos_cpr, float vel_estimate, float vel_setpoint);
     void anticogging_remove_bias();
     float anticogging_get_val(uint32_t index);
     void anticogging_set_val(uint32_t index, float val);
