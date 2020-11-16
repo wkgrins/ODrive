@@ -158,6 +158,7 @@ void Encoder::set_circular_count(int32_t count, bool update_offset) {
     // Update states
     count_in_cpr_ = mod(count, config_.cpr);
     pos_cpr_counts_ = (float)count_in_cpr_;
+    pos_cpr_ = 0.0f;
 
     cpu_exit_critical(prim);
 }
@@ -597,7 +598,7 @@ bool Encoder::update() {
 
     float pos_cpr = pos_cpr_.get_any().value_or(0.0f);
     pos_cpr += wrap_pm((pos_cpr_counts_ - pos_cpr_counts_last) / (float)config_.cpr, 1.0f);
-    pos_cpr = fmodf_pos(pos_circular, 1.0f);
+    pos_cpr = fmodf_pos(pos_cpr, 1.0f);
     pos_cpr_ = pos_cpr;
 
     //// run encoder count interpolation

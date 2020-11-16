@@ -18,6 +18,7 @@ public:
         float start_gain = 25.0f;
         float end_gain = 5.0f;
         float end_tolerance = 0.06f; // threshold for average abs vel error to end anticogging
+        float vel_ramp_rate = (0.5f - 0.05f) / 30.0f; // [turns/s^2]
     };
 
     struct Config_t {

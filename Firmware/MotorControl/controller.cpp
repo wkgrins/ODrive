@@ -123,7 +123,7 @@ void Controller::anticogging_calibration(float pos_estimate, float pos_cpr, floa
 
         // input_vel can sometimes change too quickly, try a ramp limiter on it to prevent sudden drops
         // max dv/dt = (start_vel - end_vel) / (30 seconds)?
-        float ramp_rate = current_meas_period * (config_.anticogging.start_vel - config_.anticogging.end_vel) / 30.0f;
+        float ramp_rate = current_meas_period * config_.anticogging.vel_ramp_rate;
 
         if (one_turn) {
             float range = anticogging_error_max_ - config_.anticogging.end_tolerance;
