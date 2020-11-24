@@ -35,8 +35,10 @@ bool Stm32SpiArbiter::start() {
     if (!equals(task.config, hspi_->Init)) {
         HAL_SPI_DeInit(hspi_);
         hspi_->Init = task.config;
-        HAL_SPI_Init(hspi_);
+        HAL_SPI_Init(hspi_);  
     }
+
+    
     task.ncs_gpio.write(false);
     
     HAL_StatusTypeDef status = HAL_ERROR;
@@ -44,12 +46,26 @@ bool Stm32SpiArbiter::start() {
     if (hspi_->hdmatx->State != HAL_DMA_STATE_READY || hspi_->hdmarx->State != HAL_DMA_STATE_READY) {
         // This can happen if the DMA or interrupt priorities are not configured properly.
         status = HAL_BUSY;
-    } else if (task.tx_buf && task.rx_buf) {
-        status = HAL_SPI_TransmitReceive_DMA(hspi_, (uint8_t*)task.tx_buf, task.rx_buf, task.length);
-    } else if (task.tx_buf) {
-        status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
-    } else if (task.rx_buf) {
-        status = HAL_SPI_Receive_DMA(hspi_, task.rx_buf, task.length);
+    } else if(!task.split_tx_rx) {
+        if (task.tx_buf && task.rx_buf) {
+            status = HAL_SPI_TransmitReceive_DMA(hspi_, (uint8_t*)task.tx_buf, task.rx_buf, task.length);
+        } else if (task.tx_buf) {
+            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
+        } else if (task.rx_buf) {
+            status = HAL_SPI_Receive_DMA(hspi_, task.rx_buf, task.length);
+        }
+    } else {
+        if(!task.done_tx) {
+            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
+        } else {
+            status = HAL_SPI_Receive_DMA(hspi_, (uint8_t*)task.rx_buf, task.length);
+            
+            // need to stop the clock pulses so no Overrun error occurs...
+            // I'm not sure how to do this properly if you wanted to receive multiple 16bit blocks
+            // in one DMA request, but disabling SPI right after starting the receive seems to work.
+            __HAL_SPI_DISABLE(hspi_);
+
+        }
     }
 
     if (status != HAL_OK) {
@@ -94,6 +110,8 @@ bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const
         .on_complete = [](void* ctx, bool success) { *(volatile uint8_t*)ctx = success ? 1 : 0; },
         .on_complete_ctx = (void*)&result,
         .is_in_use = false,
+        .split_tx_rx = false,
+        .done_tx = false,
         .next = nullptr
     };
 
@@ -111,16 +129,26 @@ void Stm32SpiArbiter::on_complete() {
         return; // this should not happen
     }
 
-    // Wrap up transfer
-    task_list_->ncs_gpio.write(true);
-    if (task_list_->on_complete) {
-        (*task_list_->on_complete)(task_list_->on_complete_ctx, true);
-    }
-
-    // Start next task if any
     SpiTask* next = nullptr;
-    CRITICAL_SECTION() {
-        next = task_list_ = task_list_->next;
+
+    if(task_list_->split_tx_rx && !task_list_->done_tx) {
+        // run the same task again, this time will be receiving
+        CRITICAL_SECTION() {
+            task_list_->done_tx = true;
+            next = task_list_;
+        }
+    } else {
+        // receive complete, pull CS high, run completion callback
+        task_list_->ncs_gpio.write(true);
+        if (task_list_->on_complete) {
+            (*task_list_->on_complete)(task_list_->on_complete_ctx, true);
+        }
+
+        // Start next task if any
+        CRITICAL_SECTION() {
+            task_list_->done_tx = false;
+            next = task_list_ = task_list_->next;
+        }
     }
     if (next) {
         start();
