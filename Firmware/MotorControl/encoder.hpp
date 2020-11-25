@@ -126,6 +126,24 @@ public:
     uint16_t abs_spi_dma_tx_[1] = {0xFFFF};
     uint16_t abs_spi_dma_rx_[1];
     Stm32SpiArbiter::SpiTask spi_task_;
+
+    // specific to TLE encoder
+    Stm32SpiArbiter::SpiTask tle_read_task_;
+    Stm32SpiArbiter::SpiTask tle_write_task_;
+    uint16_t tle_dma_read_tx_[1] = {0x0000};
+    uint16_t tle_dma_write_tx_[2] = {0x0000, 0x0000};
+    uint16_t tle_dma_rx_[1] = {0xFFFF};
+    bool tle_spi_read(uint16_t command);                    // send command
+    bool tle_spi_write(uint16_t command, uint16_t data);    // send command and data
+    void tle_spi_read_cb(bool success);                     // callback to release task
+    void tle_spi_write_cb(bool success);
+    uint16_t tle_spi_get_rx();                              // returns value of tle_dma_rx_
+
+
+    // odrivetool function wrappers
+    void tle_write(uint32_t command, uint32_t data); // Cast to uint16_t!!!
+    void tle_read(uint32_t command);
+    uint32_t tle_get_rx();
 };
 
 #endif // __ENCODER_HPP

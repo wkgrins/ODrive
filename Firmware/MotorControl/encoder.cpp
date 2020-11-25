@@ -73,6 +73,32 @@ void Encoder::setup() {
             .CRCPolynomial = 10,
         };
     }
+    tle_read_task_.config = {
+        .Mode = SPI_MODE_MASTER,
+        .Direction = SPI_DIRECTION_1LINE,
+        .DataSize = SPI_DATASIZE_16BIT,
+        .CLKPolarity = SPI_POLARITY_LOW,
+        .CLKPhase = SPI_PHASE_2EDGE,
+        .NSS = SPI_NSS_SOFT,
+        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8,
+        .FirstBit = SPI_FIRSTBIT_MSB,
+        .TIMode = SPI_TIMODE_DISABLE,
+        .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
+        .CRCPolynomial = 10,
+    };
+    tle_write_task_.config = {
+        .Mode = SPI_MODE_MASTER,
+        .Direction = SPI_DIRECTION_2LINES, // only mosi for writing!
+        .DataSize = SPI_DATASIZE_16BIT,
+        .CLKPolarity = SPI_POLARITY_LOW,
+        .CLKPhase = SPI_PHASE_2EDGE,
+        .NSS = SPI_NSS_SOFT,
+        .BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8,
+        .FirstBit = SPI_FIRSTBIT_MSB,
+        .TIMode = SPI_TIMODE_DISABLE,
+        .CRCCalculation = SPI_CRCCALCULATION_DISABLE,
+        .CRCPolynomial = 10,
+    };
 }
 
 void Encoder::set_error(Error error) {
@@ -433,6 +459,79 @@ bool Encoder::abs_spi_start_transaction() {
         }
     }
     return true;
+}
+
+// send single 16 bit word to TLE encoder
+bool Encoder::tle_spi_read(uint16_t command) {
+    if (mode_ == MODE_SPI_ABS_TLE){
+        if (Stm32SpiArbiter::acquire_task(&tle_read_task_)) {
+            tle_dma_read_tx_[0] = command;
+            tle_read_task_.ncs_gpio = abs_spi_cs_gpio_;
+            tle_read_task_.tx_buf = (uint8_t*)tle_dma_read_tx_;
+            tle_read_task_.rx_buf = (uint8_t*)tle_dma_rx_;
+            tle_read_task_.length = 1;
+            tle_read_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->tle_spi_read_cb(success); };
+            tle_read_task_.on_complete_ctx = this;
+            tle_read_task_.next = nullptr;
+            tle_read_task_.split_tx_rx = true;
+            tle_read_task_.done_tx = false;
+
+            spi_arbiter_->transfer_async(&tle_read_task_);
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+// For write, this is simply 3 wire spi (no bidirectionality)
+bool Encoder::tle_spi_write(uint16_t command, uint16_t data) {
+    if (mode_ == MODE_SPI_ABS_TLE){
+        if (Stm32SpiArbiter::acquire_task(&tle_write_task_)) {
+            tle_dma_write_tx_[0] = command;
+            tle_dma_write_tx_[1] = data;
+            tle_write_task_.ncs_gpio = abs_spi_cs_gpio_;
+            tle_write_task_.tx_buf = (uint8_t*)tle_dma_write_tx_;
+            tle_write_task_.rx_buf = nullptr;
+            tle_write_task_.length = 2;
+            tle_write_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->tle_spi_write_cb(success); };
+            tle_write_task_.on_complete_ctx = this;
+            tle_write_task_.next = nullptr;
+            tle_write_task_.split_tx_rx = false;
+            tle_write_task_.done_tx = false;
+
+            spi_arbiter_->transfer_async(&tle_write_task_);
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Encoder::tle_spi_read_cb(bool success) {
+    Stm32SpiArbiter::release_task(&tle_read_task_);
+}
+
+void Encoder::tle_spi_write_cb(bool success) {
+    Stm32SpiArbiter::release_task(&tle_write_task_);
+}
+
+// returns value of tle_dma_rx_
+uint16_t Encoder::tle_spi_get_rx() {
+    return tle_dma_rx_[0];
+}
+
+void Encoder::tle_write(uint32_t command, uint32_t data) {
+    tle_spi_write((uint16_t)command, (uint16_t)data);
+}
+
+
+void Encoder::tle_read(uint32_t command) {
+    tle_spi_read((uint16_t)command);
+}
+
+uint32_t Encoder::tle_get_rx() {
+    return (uint32_t)tle_spi_get_rx();
 }
 
 uint8_t ams_parity(uint16_t v) {
