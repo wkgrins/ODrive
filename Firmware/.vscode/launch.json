@@ -10,13 +10,14 @@
             "servertype": "openocd",
             "request": "launch",
             "name": "Debug ODrive - ST-Link",
-            "executable": "${workspaceRoot}/build/ODriveFirmware.elf",
+            "executable": "${workspaceFolder}/build/ODriveFirmware.elf",
             "configFiles": [
                 "interface/stlink-v2.cfg",
                 "target/stm32f4x_stlink.cfg",
             ],
-            "svdFile": "${workspaceRoot}/Board/v3/STM32F40x.svd",
-            "cwd": "${workspaceRoot}"
+            "svdFile": "${workspaceFolder}/Board/v3/STM32F40x.svd",
+            "cwd": "${workspaceFolder}",
+            "showDevDebugOutput": true
         },
         {
             // For the Cortex-Debug extension

@@ -139,7 +139,7 @@ Drv8301::FaultType_e Drv8301::get_error() {
 
 bool Drv8301::read_reg(const RegName_e regName, uint16_t* data) {
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Read, regName, 0);
-    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), nullptr, 1, 1000)) {
+    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), nullptr, 1, 0, 1000)) {
         return false;
     }
     
@@ -147,7 +147,7 @@ bool Drv8301::read_reg(const RegName_e regName, uint16_t* data) {
 
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Read, regName, 0);
     rx_buf_ = 0xffff;
-    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), (uint8_t *)(&rx_buf_), 1, 1000)) {
+    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), (uint8_t *)(&rx_buf_), 1, 1, 1000)) {
         return false;
     }
 
@@ -167,7 +167,7 @@ bool Drv8301::read_reg(const RegName_e regName, uint16_t* data) {
 bool Drv8301::write_reg(const RegName_e regName, const uint16_t data) {
     // Do blocking write
     tx_buf_ = build_ctrl_word(DRV8301_CtrlMode_Write, regName, data);
-    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), nullptr, 1, 1000)) {
+    if (!spi_arbiter_->transfer(spi_config_, ncs_gpio_, (uint8_t *)(&tx_buf_), nullptr, 1, 0, 1000)) {
         return false;
     }
     delay_us(1);

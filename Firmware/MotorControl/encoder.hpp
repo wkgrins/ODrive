@@ -124,7 +124,7 @@ public:
     uint32_t abs_spi_cr2;
     uint16_t abs_spi_tle_dma_tx_[1] = {0x8020};
     uint16_t abs_spi_dma_tx_[1] = {0xFFFF};
-    uint16_t abs_spi_dma_rx_[1];
+    uint16_t abs_spi_dma_rx_[2];
     Stm32SpiArbiter::SpiTask spi_task_;
 
     // specific to TLE encoder
@@ -137,7 +137,7 @@ public:
     bool tle_spi_write(uint16_t command, uint16_t data);    // send command and data
     void tle_spi_read_cb(bool success);                     // callback to release task
     void tle_spi_write_cb(bool success);
-    uint16_t tle_spi_get_rx();                              // returns value of tle_dma_rx_
+    uint32_t tle_spi_get_rx();                              // returns value of tle_dma_rx_
 
 
     // odrivetool function wrappers

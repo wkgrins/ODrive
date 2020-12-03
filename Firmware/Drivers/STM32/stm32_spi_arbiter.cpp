@@ -48,17 +48,17 @@ bool Stm32SpiArbiter::start() {
         status = HAL_BUSY;
     } else if(!task.split_tx_rx) {
         if (task.tx_buf && task.rx_buf) {
-            status = HAL_SPI_TransmitReceive_DMA(hspi_, (uint8_t*)task.tx_buf, task.rx_buf, task.length);
+            status = HAL_SPI_TransmitReceive_DMA(hspi_, (uint8_t*)task.tx_buf, task.rx_buf, task.tx_length);
         } else if (task.tx_buf) {
-            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
+            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.tx_length);
         } else if (task.rx_buf) {
-            status = HAL_SPI_Receive_DMA(hspi_, task.rx_buf, task.length);
+            status = HAL_SPI_Receive_DMA(hspi_, task.rx_buf, task.rx_length);
         }
     } else {
         if(!task.done_tx) {
-            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.length);
+            status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.tx_length);
         } else {
-            status = HAL_SPI_Receive_DMA(hspi_, (uint8_t*)task.rx_buf, task.length);
+            status = HAL_SPI_Receive_DMA(hspi_, (uint8_t*)task.rx_buf, task.rx_length);
             
             // need to stop the clock pulses so no Overrun error occurs...
             // I'm not sure how to do this properly if you wanted to receive multiple 16bit blocks
@@ -98,7 +98,7 @@ void Stm32SpiArbiter::transfer_async(SpiTask* task) {
 }
 
 // TODO: this currently only works when called in a CMSIS thread.
-bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms) {
+bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t tx_length, size_t rx_length, uint32_t timeout_ms) {
     volatile uint8_t result = 0xff;
 
     SpiTask task = {
@@ -106,7 +106,8 @@ bool Stm32SpiArbiter::transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const
         .ncs_gpio = ncs_gpio,
         .tx_buf = tx_buf,
         .rx_buf = rx_buf,
-        .length = length,
+        .tx_length = tx_length,
+        .rx_length = rx_length,
         .on_complete = [](void* ctx, bool success) { *(volatile uint8_t*)ctx = success ? 1 : 0; },
         .on_complete_ctx = (void*)&result,
         .is_in_use = false,

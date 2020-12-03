@@ -443,7 +443,8 @@ bool Encoder::abs_spi_start_transaction() {
             spi_task_.ncs_gpio = abs_spi_cs_gpio_;
             spi_task_.tx_buf = (uint8_t*)(mode_ == MODE_SPI_ABS_TLE ? abs_spi_tle_dma_tx_ : abs_spi_dma_tx_);
             spi_task_.rx_buf = (uint8_t*)abs_spi_dma_rx_;
-            spi_task_.length = 1;
+            spi_task_.tx_length = 1;
+            spi_task_.rx_length = 1;
             spi_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->abs_spi_cb(success); };
             spi_task_.on_complete_ctx = this;
             spi_task_.next = nullptr;
@@ -469,7 +470,8 @@ bool Encoder::tle_spi_read(uint16_t command) {
             tle_read_task_.ncs_gpio = abs_spi_cs_gpio_;
             tle_read_task_.tx_buf = (uint8_t*)tle_dma_read_tx_;
             tle_read_task_.rx_buf = (uint8_t*)tle_dma_rx_;
-            tle_read_task_.length = 1;
+            tle_read_task_.tx_length = 1;
+            tle_read_task_.rx_length = 2;
             tle_read_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->tle_spi_read_cb(success); };
             tle_read_task_.on_complete_ctx = this;
             tle_read_task_.next = nullptr;
@@ -493,7 +495,7 @@ bool Encoder::tle_spi_write(uint16_t command, uint16_t data) {
             tle_write_task_.ncs_gpio = abs_spi_cs_gpio_;
             tle_write_task_.tx_buf = (uint8_t*)tle_dma_write_tx_;
             tle_write_task_.rx_buf = nullptr;
-            tle_write_task_.length = 2;
+            tle_write_task_.tx_length = 2;
             tle_write_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->tle_spi_write_cb(success); };
             tle_write_task_.on_complete_ctx = this;
             tle_write_task_.next = nullptr;
@@ -517,8 +519,8 @@ void Encoder::tle_spi_write_cb(bool success) {
 }
 
 // returns value of tle_dma_rx_
-uint16_t Encoder::tle_spi_get_rx() {
-    return tle_dma_rx_[0];
+uint32_t Encoder::tle_spi_get_rx() {
+    return (uint32_t)tle_dma_rx_[0] | (0xFFFF0000 & (uint32_t)(tle_dma_rx_[1])<<16);
 }
 
 void Encoder::tle_write(uint32_t command, uint32_t data) {

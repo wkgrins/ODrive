@@ -12,7 +12,8 @@ public:
         Stm32Gpio ncs_gpio;
         const uint8_t* tx_buf;
         uint8_t* rx_buf;
-        size_t length;
+        size_t tx_length;
+        size_t rx_length;
         void (*on_complete)(void*, bool);
         void* on_complete_ctx;
         bool is_in_use = false;
@@ -78,7 +79,7 @@ public:
      * @param rx_buf: Buffer for the incoming data to be sent. Can be null unless
      *        tx_buf is null too.
      */
-    bool transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t length, uint32_t timeout_ms);
+    bool transfer(SPI_InitTypeDef config, Stm32Gpio ncs_gpio, const uint8_t* tx_buf, uint8_t* rx_buf, size_t tx_length, size_t rx_length, uint32_t timeout_ms);
 
     /**
      * @brief Completion method to be called from HAL_SPI_TxCpltCallback,
