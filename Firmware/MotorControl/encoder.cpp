@@ -361,9 +361,9 @@ bool Encoder::run_offset_calibration() {
 
     axis_->motor_.disarm();
 
-    config_.phase_offset = encvaluesum / (num_steps * 2);
-    int32_t residual = encvaluesum - ((int64_t)config_.phase_offset * (int64_t)(num_steps * 2));
-    config_.phase_offset_float = (float)residual / (float)(num_steps * 2) + 0.5f;  // add 0.5 to center-align state to phase
+    config_.phase_offset = encvaluesum / num_steps;
+    int32_t residual = encvaluesum - ((int64_t)config_.phase_offset * (int64_t)num_steps);
+    config_.phase_offset_float = (float)residual / (float)num_steps + 0.5f;  // add 0.5 to center-align state to phase
 
     is_ready_ = true;
     return true;
