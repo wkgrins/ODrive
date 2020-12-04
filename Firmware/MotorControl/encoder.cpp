@@ -1,15 +1,11 @@
 
-#include "odrive_main.h"
 #include <Drivers/STM32/stm32_system.h>
 
+#include "odrive_main.h"
 
 Encoder::Encoder(TIM_HandleTypeDef* timer, Stm32Gpio index_gpio,
                  Stm32Gpio hallA_gpio, Stm32Gpio hallB_gpio, Stm32Gpio hallC_gpio,
-                 Stm32SpiArbiter* spi_arbiter) :
-        timer_(timer), index_gpio_(index_gpio),
-        hallA_gpio_(hallA_gpio), hallB_gpio_(hallB_gpio), hallC_gpio_(hallC_gpio),
-        spi_arbiter_(spi_arbiter)
-{
+                 Stm32SpiArbiter* spi_arbiter) : timer_(timer), index_gpio_(index_gpio), hallA_gpio_(hallA_gpio), hallB_gpio_(hallB_gpio), hallC_gpio_(hallC_gpio), spi_arbiter_(spi_arbiter) {
 }
 
 static void enc_index_cb_wrapper(void* ctx) {
@@ -33,8 +29,7 @@ bool Encoder::apply_config(ODriveIntf::MotorIntf::MotorType motor_type) {
 
 void Encoder::setup() {
     mode_ = config_.mode;
-
-    if(mode_ & MODE_FLAG_ABS) {
+    if (mode_ & MODE_FLAG_ABS) {
         abs_spi_cs_pin_init();
         if (axis_->controller_.config_.anticogging.pre_calibrated) {
             axis_->controller_.anticogging_valid_ = true;
@@ -43,8 +38,8 @@ void Encoder::setup() {
         HAL_TIM_Encoder_Start(timer_, TIM_CHANNEL_ALL);
         set_idx_subscribe();
     }
-    
-    if(mode_ == MODE_SPI_ABS_TLE) {
+
+    if (mode_ == MODE_SPI_ABS_TLE) {
         spi_task_.config = {
             .Mode = SPI_MODE_MASTER,
             .Direction = SPI_DIRECTION_1LINE,
@@ -88,7 +83,7 @@ void Encoder::setup() {
     };
     tle_write_task_.config = {
         .Mode = SPI_MODE_MASTER,
-        .Direction = SPI_DIRECTION_2LINES, // only mosi for writing!
+        .Direction = SPI_DIRECTION_2LINES,  // only mosi for writing!
         .DataSize = SPI_DATASIZE_16BIT,
         .CLKPolarity = SPI_POLARITY_LOW,
         .CLKPhase = SPI_PHASE_2EDGE,
@@ -107,7 +102,7 @@ void Encoder::set_error(Error error) {
     error_ |= error;
 }
 
-bool Encoder::do_checks(){
+bool Encoder::do_checks() {
     return error_ == ERROR_NONE;
 }
 
@@ -122,10 +117,10 @@ void Encoder::enc_index_cb() {
     if (config_.use_index) {
         set_circular_count(0, false);
         if (config_.zero_count_on_find_idx)
-            set_linear_count(0); // Avoid position control transient after search
+            set_linear_count(0);  // Avoid position control transient after search
         if (config_.pre_calibrated) {
             is_ready_ = true;
-            if(axis_->controller_.config_.anticogging.pre_calibrated){
+            if (axis_->controller_.config_.anticogging.pre_calibrated) {
                 axis_->controller_.anticogging_valid_ = true;
             }
         } else {
@@ -152,8 +147,8 @@ void Encoder::set_idx_subscribe(bool override_enable) {
 }
 
 void Encoder::update_pll_gains() {
-    pll_kp_ = 2.0f * config_.bandwidth;  // basic conversion to discrete time
-    pll_ki_ = 0.25f * (pll_kp_ * pll_kp_); // Critically damped
+    pll_kp_ = 2.0f * config_.bandwidth;     // basic conversion to discrete time
+    pll_ki_ = 0.25f * (pll_kp_ * pll_kp_);  // Critically damped
 
     // Check that we don't get problems with discrete time approximation
     if (!(current_meas_period * pll_kp_ < 1.0f)) {
@@ -217,7 +212,7 @@ bool Encoder::run_direction_find() {
     int32_t init_enc_val = shadow_count_;
 
     Axis::LockinConfig_t lockin_config = axis_->config_.calibration_lockin;
-    lockin_config.finish_distance = lockin_config.vel * 3.0f; // run for 3 seconds
+    lockin_config.finish_distance = lockin_config.vel * 3.0f;  // run for 3 seconds
     lockin_config.finish_on_distance = true;
     lockin_config.finish_on_enc_idx = false;
     lockin_config.finish_on_vel = false;
@@ -275,7 +270,7 @@ bool Encoder::run_offset_calibration() {
         axis_->motor_.current_control_.enable_current_control_src_ = (axis_->motor_.config_.motor_type != Motor::MOTOR_TYPE_GIMBAL);
         axis_->motor_.current_control_.Idq_setpoint_src_.connect_to(&axis_->open_loop_controller_.Idq_setpoint_);
         axis_->motor_.current_control_.Vdq_setpoint_src_.connect_to(&axis_->open_loop_controller_.Vdq_setpoint_);
-        
+
         axis_->motor_.current_control_.phase_src_.connect_to(&axis_->open_loop_controller_.phase_);
         axis_->async_estimator_.rotor_phase_src_.connect_to(&axis_->open_loop_controller_.phase_);
 
@@ -290,15 +285,14 @@ bool Encoder::run_offset_calibration() {
     // go to start position of forward scan for start_lock_duration to get ready to scan
     for (size_t i = 0; i < (size_t)(start_lock_duration * 1000.0f); ++i) {
         if (!axis_->motor_.is_armed_) {
-            return false; // TODO: return "disarmed" error code
+            return false;  // TODO: return "disarmed" error code
         }
         if (axis_->requested_state_ != Axis::AXIS_STATE_UNDEFINED) {
             axis_->motor_.disarm();
-            return false; // TODO: return "aborted" error code
+            return false;  // TODO: return "aborted" error code
         }
         osDelay(1);
     }
-
 
     int32_t init_enc_val = shadow_count_;
     uint32_t num_steps = 0;
@@ -406,14 +400,13 @@ void Encoder::sample_now() {
         case MODE_SPI_ABS_AMS:
         case MODE_SPI_ABS_CUI:
         case MODE_SPI_ABS_AEAT:
-        case MODE_SPI_ABS_RLS:
-        {
+        case MODE_SPI_ABS_RLS: {
             abs_spi_start_transaction();
             // Do nothing
         } break;
 
         default: {
-           set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
+            set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
         } break;
     }
 
@@ -432,24 +425,23 @@ bool Encoder::read_sampled_gpio(Stm32Gpio gpio) {
 }
 
 void Encoder::decode_hall_samples() {
-    hall_state_ = (read_sampled_gpio(hallA_gpio_) ? 1 : 0)
-                | (read_sampled_gpio(hallB_gpio_) ? 2 : 0)
-                | (read_sampled_gpio(hallC_gpio_) ? 4 : 0);
+    hall_state_ = (read_sampled_gpio(hallA_gpio_) ? 1 : 0) | (read_sampled_gpio(hallB_gpio_) ? 2 : 0) | (read_sampled_gpio(hallC_gpio_) ? 4 : 0);
 }
 
 bool Encoder::abs_spi_start_transaction() {
-    if (mode_ & MODE_FLAG_ABS){
+    if (mode_ & MODE_FLAG_ABS) {
         if (Stm32SpiArbiter::acquire_task(&spi_task_)) {
             spi_task_.ncs_gpio = abs_spi_cs_gpio_;
             spi_task_.tx_buf = (uint8_t*)(mode_ == MODE_SPI_ABS_TLE ? abs_spi_tle_dma_tx_ : abs_spi_dma_tx_);
             spi_task_.rx_buf = (uint8_t*)abs_spi_dma_rx_;
             spi_task_.tx_length = 1;
-            spi_task_.rx_length = 1;
+            // dma transfer complete callback appears to be triggered at the *start* of the last word, not the end.
+            spi_task_.rx_length = mode_ == MODE_SPI_ABS_TLE ? 3 : 1;
             spi_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->abs_spi_cb(success); };
             spi_task_.on_complete_ctx = this;
             spi_task_.next = nullptr;
-            
-            if(mode_ == MODE_SPI_ABS_TLE) {
+
+            if (mode_ == MODE_SPI_ABS_TLE) {
                 spi_task_.split_tx_rx = true;
                 spi_task_.done_tx = false;
             }
@@ -463,15 +455,15 @@ bool Encoder::abs_spi_start_transaction() {
 }
 
 // send single 16 bit word to TLE encoder
-bool Encoder::tle_spi_read(uint16_t command) {
-    if (mode_ == MODE_SPI_ABS_TLE){
+bool Encoder::tle_spi_read(uint16_t command, uint16_t length) {
+    if (1 || mode_ == MODE_SPI_ABS_TLE) {
         if (Stm32SpiArbiter::acquire_task(&tle_read_task_)) {
             tle_dma_read_tx_[0] = command;
             tle_read_task_.ncs_gpio = abs_spi_cs_gpio_;
             tle_read_task_.tx_buf = (uint8_t*)tle_dma_read_tx_;
             tle_read_task_.rx_buf = (uint8_t*)tle_dma_rx_;
             tle_read_task_.tx_length = 1;
-            tle_read_task_.rx_length = 2;
+            tle_read_task_.rx_length = length;
             tle_read_task_.on_complete = [](void* ctx, bool success) { ((Encoder*)ctx)->tle_spi_read_cb(success); };
             tle_read_task_.on_complete_ctx = this;
             tle_read_task_.next = nullptr;
@@ -488,7 +480,7 @@ bool Encoder::tle_spi_read(uint16_t command) {
 
 // For write, this is simply 3 wire spi (no bidirectionality)
 bool Encoder::tle_spi_write(uint16_t command, uint16_t data) {
-    if (mode_ == MODE_SPI_ABS_TLE){
+    if (1 || mode_ == MODE_SPI_ABS_TLE) {
         if (Stm32SpiArbiter::acquire_task(&tle_write_task_)) {
             tle_dma_write_tx_[0] = command;
             tle_dma_write_tx_[1] = data;
@@ -520,16 +512,15 @@ void Encoder::tle_spi_write_cb(bool success) {
 
 // returns value of tle_dma_rx_
 uint32_t Encoder::tle_spi_get_rx() {
-    return (uint32_t)tle_dma_rx_[0] | (0xFFFF0000 & (uint32_t)(tle_dma_rx_[1])<<16);
+    return (uint32_t)tle_dma_rx_[0] | ((uint32_t)(tle_dma_rx_[1]) << 16);
 }
 
 void Encoder::tle_write(uint32_t command, uint32_t data) {
     tle_spi_write((uint16_t)command, (uint16_t)data);
 }
 
-
-void Encoder::tle_read(uint32_t command) {
-    tle_spi_read((uint16_t)command);
+void Encoder::tle_read(uint32_t command, uint32_t length) {
+    tle_spi_read((uint16_t)command, (uint16_t)length);
 }
 
 uint32_t Encoder::tle_get_rx() {
@@ -549,6 +540,36 @@ uint8_t cui_parity(uint16_t v) {
     v ^= v >> 4;
     v ^= v >> 2;
     return ~v & 3;
+}
+
+// From datasheet example code for TLE5012B
+// “message” is the data transfer for which a CRC has to be calculated.
+// A typical “message” consists of 2 bytes for the command word plus 2 bytes for the
+// data word plus 2 bytes for the safety word.
+// “Bytelength” is the number of bytes in the “message”. A typical “message” has 6
+// bytes.
+// *Table CRC is the pointer to the look-up table (LUT)
+uint8_t Encoder::tle_crc(uint8_t* message, size_t length, uint8_t* tle_crc_table) {
+    uint8_t crc = 0xFF;  // seed value
+
+    for (uint8_t index = 0; index < length; index++) {
+        crc = tle_crc_table[crc ^ *(message + index)];
+    }
+
+    return (~crc);
+}
+
+bool Encoder::tle_safety(uint16_t command, uint16_t data, uint16_t safety_word) {
+    bool status = false;
+
+    status |= (bool)((safety_word & 0x7000) ^ 0x7000);  // System error, interface error, invalid angle
+    uint8_t msg[4] = {(uint8_t)(command>>8u), (uint8_t)command, (uint8_t)(data>>8u), (uint8_t)data};
+
+    // check CRC
+    uint8_t crc_calc = tle_crc((uint8_t*)msg, 4, tle_crc_table);
+    uint8_t crc_rx = (uint8_t)(safety_word & 0x00FF);
+    status |= (crc_calc != crc_rx);
+    return status;
 }
 
 void Encoder::abs_spi_cb(bool success) {
@@ -583,13 +604,16 @@ void Encoder::abs_spi_cb(bool success) {
         } break;
 
         case MODE_SPI_ABS_TLE: {
-            uint16_t rawVal = abs_spi_dma_rx_[0];
+            if (tle_safety(0x8021, abs_spi_dma_rx_[1], abs_spi_dma_rx_[2])) {
+                goto done;
+            }
+            uint16_t rawVal = abs_spi_dma_rx_[1];
             pos = rawVal & 0x7fff;
         } break;
 
         default: {
-           set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
-           goto done;
+            set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
+            goto done;
         } break;
     }
 
@@ -603,7 +627,7 @@ done:
     Stm32SpiArbiter::release_task(&spi_task_);
 }
 
-void Encoder::abs_spi_cs_pin_init(){
+void Encoder::abs_spi_cs_pin_init() {
     // Decode and init cs pin
     abs_spi_cs_gpio_ = get_gpio(config_.abs_spi_cs_gpio_pin);
     abs_spi_cs_gpio_.config(GPIO_MODE_OUTPUT_PP, GPIO_PULLUP);
@@ -615,14 +639,14 @@ void Encoder::abs_spi_cs_pin_init(){
 bool Encoder::update() {
     // update internal encoder state.
     int32_t delta_enc = 0;
-    int32_t pos_abs_latched = pos_abs_; //LATCH
+    int32_t pos_abs_latched = pos_abs_;  //LATCH
 
     switch (mode_) {
         case MODE_INCREMENTAL: {
             //TODO: use count_in_cpr_ instead as shadow_count_ can overflow
             //or use 64 bit
             int16_t delta_enc_16 = (int16_t)tim_cnt_sample_ - (int16_t)shadow_count_;
-            delta_enc = (int32_t)delta_enc_16; //sign extend
+            delta_enc = (int32_t)delta_enc_16;  //sign extend
         } break;
 
         case MODE_HALL: {
@@ -648,14 +672,14 @@ bool Encoder::update() {
 
             delta_enc = fake_count - count_in_cpr_;
             delta_enc = mod(delta_enc, 6283);
-            if (delta_enc > 6283/2)
+            if (delta_enc > 6283 / 2)
                 delta_enc -= 6283;
         } break;
-        
+
         case MODE_SPI_ABS_TLE:
         case MODE_SPI_ABS_RLS:
         case MODE_SPI_ABS_AMS:
-        case MODE_SPI_ABS_CUI: 
+        case MODE_SPI_ABS_CUI:
         case MODE_SPI_ABS_AEAT: {
             if (abs_spi_pos_updated_ == false) {
                 // Low pass filter the error
@@ -670,13 +694,13 @@ bool Encoder::update() {
             }
 
             abs_spi_pos_updated_ = false;
-            delta_enc = pos_abs_latched - count_in_cpr_; //LATCH
+            delta_enc = pos_abs_latched - count_in_cpr_;  //LATCH
             delta_enc = mod(delta_enc, config_.cpr);
-            if (delta_enc > config_.cpr/2) {
+            if (delta_enc > config_.cpr / 2) {
                 delta_enc -= config_.cpr;
             }
 
-        }break;
+        } break;
         default: {
             set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
             return false;
@@ -687,7 +711,7 @@ bool Encoder::update() {
     count_in_cpr_ += delta_enc;
     count_in_cpr_ = mod(count_in_cpr_, config_.cpr);
 
-    if(mode_ & MODE_FLAG_ABS)
+    if (mode_ & MODE_FLAG_ABS)
         count_in_cpr_ = pos_abs_latched;
 
     // Memory for pos_circular
@@ -696,7 +720,7 @@ bool Encoder::update() {
     //// run pll (for now pll is in units of encoder counts)
     // Predict current pos
     pos_estimate_counts_ += current_meas_period * vel_estimate_counts_;
-    pos_cpr_counts_      += current_meas_period * vel_estimate_counts_;
+    pos_cpr_counts_ += current_meas_period * vel_estimate_counts_;
     // discrete phase detector
     float delta_pos_counts = (float)(shadow_count_ - (int32_t)std::floor(pos_estimate_counts_));
     float delta_pos_cpr_counts = (float)(count_in_cpr_ - (int32_t)std::floor(pos_cpr_counts_));
@@ -715,12 +739,12 @@ bool Encoder::update() {
     // Outputs from Encoder for Controller
     pos_estimate_ = pos_estimate_counts_ / (float)config_.cpr;
     vel_estimate_ = vel_estimate_counts_ / (float)config_.cpr;
-    
+
     // TODO: we should strictly require that this value is from the previous iteration
     // to avoid spinout scenarios. However that requires a proper way to reset
     // the encoder from error states.
     float pos_circular = pos_circular_.get_any().value_or(0.0f);
-    pos_circular +=  wrap_pm((pos_cpr_counts_ - pos_cpr_counts_last) / (float)config_.cpr, 1.0f);
+    pos_circular += wrap_pm((pos_cpr_counts_ - pos_cpr_counts_last) / (float)config_.cpr, 1.0f);
     pos_circular = fmodf_pos(pos_circular, axis_->controller_.config_.circular_setpoint_range);
     pos_circular_ = pos_circular;
 
@@ -734,8 +758,8 @@ bool Encoder::update() {
     // if we are stopped, make sure we don't randomly drift
     if (snap_to_zero_vel || !config_.enable_phase_interpolation) {
         interpolation_ = 0.5f;
-    // reset interpolation if encoder edge comes
-    // TODO: This isn't correct. At high velocities the first phase in this count may very well not be at the edge.
+        // reset interpolation if encoder edge comes
+        // TODO: This isn't correct. At high velocities the first phase in this count may very well not be at the edge.
     } else if (delta_enc > 0) {
         interpolation_ = 0.0f;
     } else if (delta_enc < 0) {
@@ -753,10 +777,10 @@ bool Encoder::update() {
     //TODO avoid recomputing elec_rad_per_enc every time
     float elec_rad_per_enc = axis_->motor_.config_.pole_pairs * 2 * M_PI * (1.0f / (float)(config_.cpr));
     float ph = elec_rad_per_enc * (interpolated_enc - config_.phase_offset_float);
-    
+
     if (is_ready_) {
         phase_ = wrap_pm_pi(ph) * config_.direction;
-        phase_vel_ = (2*M_PI) * *vel_estimate_.get_current() * axis_->motor_.config_.pole_pairs * config_.direction;
+        phase_vel_ = (2 * M_PI) * *vel_estimate_.get_current() * axis_->motor_.config_.pole_pairs * config_.direction;
     }
 
     return true;

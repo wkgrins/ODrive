@@ -59,12 +59,6 @@ bool Stm32SpiArbiter::start() {
             status = HAL_SPI_Transmit_DMA(hspi_, (uint8_t*)task.tx_buf, task.tx_length);
         } else {
             status = HAL_SPI_Receive_DMA(hspi_, (uint8_t*)task.rx_buf, task.rx_length);
-            
-            // need to stop the clock pulses so no Overrun error occurs...
-            // I'm not sure how to do this properly if you wanted to receive multiple 16bit blocks
-            // in one DMA request, but disabling SPI right after starting the receive seems to work.
-            __HAL_SPI_DISABLE(hspi_);
-
         }
     }
 

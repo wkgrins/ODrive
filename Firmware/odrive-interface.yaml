@@ -1029,7 +1029,7 @@ interfaces:
       #tle_spi_send: {in: {word: uint16}, out: {success: bool}}
       #tle_spi_get_rx: {out: {data: uint32}}
       tle_write: {in: {command: uint32, data: uint32}}
-      tle_read: {in: {command: uint32}}
+      tle_read: {in: {command: uint32, length: uint32}}
       tle_get_rx: {out: {data: uint32}}
 
 
