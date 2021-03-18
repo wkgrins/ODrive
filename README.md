@@ -16,7 +16,7 @@ Please refer to the [Developer Guide](https://docs.odriverobotics.com/developer-
  * **Firmware**: ODrive firmware
  * **tools**: Python library & tools
  * **docs**: Documentation
-
+ * **dyn**:Dynamometer project 
 ### Other Resources
 
  * [Main Website](https://www.odriverobotics.com/)
