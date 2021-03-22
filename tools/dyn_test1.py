@@ -34,23 +34,19 @@ if odrv.axis0.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
 #Check axis state
 print(odrv.axis1.current_state)    
 
-#Run motor 1 at 1 turn/s 
+#Run motor 1 at 2 turn/s 
 odrv.axis1.controller.input_vel=2
-sp=odrv.axis1.controller.vel_setpoint
 
-print("We're cookin' with sauce now my friend!")
-# To read a value, simply read the property
-print("Bus voltage is " + str(odrv.vbus_voltage) + "V")
-
-#Run script for 1 minute
-time.sleep(60)
+#Output the motor velocity to the command line
+i=0
+while i<60:
+    i=i+1
+    print("Motor 1 speed is"+ str(odrv.axis1.encoder.vel_estimate))
+    time.sleep(0.5)
 
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
 odrv.axis1.requested_state = AXIS_STATE_IDLE
-# Or to change a value, just assign to the property
-#my_drive.axis0.controller.pos_setpoint = 3.14
-#print("Position setpoint is " + str(my_drive.axis0.controller.pos_setpoint))
 
 # And this is how function calls are done:
 #for i in [1,2,3,4]:
