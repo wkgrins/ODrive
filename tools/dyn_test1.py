@@ -41,7 +41,8 @@ odrv.axis1.controller.input_vel=2
 i=0
 while i<60:
     i=i+1
-    print("Motor 1 speed is"+ str(odrv.axis1.encoder.vel_estimate))
+    print("Motor 1 speed is " + str(odrv.axis1.encoder.vel_estimate))
+    print("Motor 1 torque is " + str(odrv.axis1.motor.current_control.Iq_measured))
     time.sleep(0.5)
 
 #Shut down at end of script
