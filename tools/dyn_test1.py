@@ -25,7 +25,11 @@ while odrv.axis0.current_state != AXIS_STATE_IDLE:
 odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-print("Locked and loaded baby!")
+#Set motor one to ramped velocity control mode, and set motor 0 to torque control mode.
+odrv.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+odrv.axis1.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
+
+print("We're cookin' with sauce now my friend!")
 # To read a value, simply read the property
 #print("Bus voltage is " + str(my_drive.vbus_voltage) + "V")
 
