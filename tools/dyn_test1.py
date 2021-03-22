@@ -3,12 +3,12 @@
 Example usage of the ODrive python library to monitor and control ODrive devices
 """
 
-#from __future__ import print_function
+from __future__ import print_function
 
-#import odrive
-#from odrive.enums import *
-#import time
-#import math
+import odrive
+from odrive.enums import *
+import time
+import math
 
 # Test if odrive is connected
 try:
@@ -19,7 +19,7 @@ except NameError:
     odrv = odrive.find_any()
 
 #Set motor one to ramped velocity control mode, and set motor 0 to torque control mode.
-odrv.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
+odrv.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
 odrv.axis1.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
 
 #Set input mode for motor one to ramped velocity
@@ -37,13 +37,13 @@ print(odrv.axis1.current_state)
 odrv.axis1.controller.input_vel=2
 sp=odrv.axis1.controller.vel_setpoint
 
-if odrv.axis1.controller.input_vel != sp:
-    print("Banana! Something isn't working still.")
-
-#print("We're cookin' with sauce now my friend!")
+print("We're cookin' with sauce now my friend!")
 # To read a value, simply read the property
 print("Bus voltage is " + str(odrv.vbus_voltage) + "V")
 
+#Shut down at end of script
+odrv.axis0.requested_state = AXIS_STATE_IDLE
+odrv.axis1.requested_state = AXIS_STATE_IDLE
 # Or to change a value, just assign to the property
 #my_drive.axis0.controller.pos_setpoint = 3.14
 #print("Position setpoint is " + str(my_drive.axis0.controller.pos_setpoint))

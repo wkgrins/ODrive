@@ -2,6 +2,8 @@
 """
 Configure odrive connected to two motors for operation in Dynamometer
 All configuration settings are saved to the odrive firmware upon completion.
+Must boot up odrivetool and run odrv0.erase_configuration() and power cycle
+odrive before running configuration script. 
 """
 
 from __future__ import print_function
@@ -14,14 +16,6 @@ import math
 # Find a connected ODrive (this will block until you connect)
 print("finding an odrive...")
 odrv = odrive.find_any()
-
-#Erase existing configuration, automatically reboots odrive
-odrv.erase_configuration()
-
-# Find the rebooted ODrive
-print("finding the rebooted odrive...")
-odrv = odrive.find_any()
-print("You're reconnected now!")
 
 # Configure Motor Attributes
 odrv.axis0.motor.config.current_lim=40		#current limit, amps
@@ -55,9 +49,9 @@ odrv.axis0.config.startup_closed_loop_control=True
 
 # Save updated Odrive configuration
 odrv.save_configuration()
-odrv.reboot()
+
 # Confirm end of program 
-print("Configuration complete! Checking axis states at startup")
+print("Configuration complete!")
 
 
 #when working configuration is finally loaded, backup using .json file
