@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Example usage of the ODrive python library to monitor and control ODrive devices
+Run dynamometer with one motor in velocity control and the other in torque 
+control mode, logging rpm and torque data for motors.
 """
 
 from __future__ import print_function
@@ -40,35 +41,29 @@ speeds=[1,2,3,4]
 #Initialize list for data logging
 omega=[]    #List for motor speed in turns/s
 tau=[]      #List for motor torque in Nm
+key=[]
+
+#Iterate motor speeds and collect rpm and torque data during operation
 for i in speeds:
     odrv.axis1.controller.input_vel=i
     j=0         #Itinerant
     while j<30: #Log data
         j=j+1
+        key.append(i)
         omega.append(odrv.axis1.encoder.vel_estimate)
         tau.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
-        time.sleep(0.5)
-    
+        time.sleep(0.5)   
+        
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
 odrv.axis1.requested_state = AXIS_STATE_IDLE
 
-print(omega)
-print(tau)
+#Write output to csv file format
 
-
-# A sine wave to test
-#t0 = time.monotonic()
-#while True:
-#    setpoint = 10000.0 * math.sin((time.monotonic() - t0)*2)
-#    print("goto " + str(int(setpoint)))
-#    my_drive.axis0.controller.pos_setpoint = setpoint
-#    time.sleep(0.01)
-
-
-
-
-
-
-
+with open('dyntest.txt', 'w') as filehandle:
+    filehandle.write("Key, Speed (turns/s), Torque (Nm)\n")
+    for i in omega:
+        ind=omega.index(i)
+        string=str(key[ind]) + ", " + str(i) + ", " + str(tau[ind]) + "\n"
+        filehandle.write(string)
 
