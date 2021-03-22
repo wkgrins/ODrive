@@ -29,9 +29,17 @@ odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 odrv.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 odrv.axis1.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
 
-print("We're cookin' with sauce now my friend!")
+#Set input mode for motor one to ramped velocity
+odrv.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
+#Set input mode for motor zero to passthrough
+odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
+
+#Run motor 1 at 1 turn/s 
+odrv.axis1.controller.input_vel=2
+
+#print("We're cookin' with sauce now my friend!")
 # To read a value, simply read the property
-#print("Bus voltage is " + str(my_drive.vbus_voltage) + "V")
+print("Bus voltage is " + str(odrv.vbus_voltage) + "V")
 
 # Or to change a value, just assign to the property
 #my_drive.axis0.controller.pos_setpoint = 3.14
