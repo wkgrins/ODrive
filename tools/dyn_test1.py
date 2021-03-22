@@ -35,20 +35,25 @@ if odrv.axis0.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
 print(odrv.axis1.current_state)    
 
 #Run motor 1 at 2 turn/s 
-odrv.axis1.controller.input_vel=2
+odrv.axis1.controller.input_vel=5
 
 #Output the motor velocity to the command line
-i=0
-while i<60:
-    i=i+1
-    print("Motor 1 speed is " + str(odrv.axis1.encoder.vel_estimate))
-    print("Motor 1 torque is " + str(odrv.axis1.motor.current_control.Iq_measured))
-    time.sleep(0.5)
+i=0         #Itinerant
+omega=[]    #List for motor speed in turns/s
+tau=[]      #List for motor torque in Nm
 
+while i<60: #Log data
+    i=i+1
+    omega.append(odrv.axis1.encoder.vel_estimate)
+    tau.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
+    time.sleep(0.5)
+    
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
 odrv.axis1.requested_state = AXIS_STATE_IDLE
 
+print(omega)
+print(tau)
 # And this is how function calls are done:
 #for i in [1,2,3,4]:
     #print('voltage on GPIO{} is {} Volt'.format(i, my_drive.get_adc_voltage(i)))
