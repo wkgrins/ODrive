@@ -15,6 +15,14 @@ import math
 print("finding an odrive...")
 odrv = odrive.find_any()
 
+#Erase existing configuration, automatically reboots odrive
+odrv.erase_configuration()
+
+# Find the rebooted ODrive
+print("finding the rebooted odrive...")
+odrv = odrive.find_any()
+print("You're reconnected now!")
+
 # Configure Motor Attributes
 odrv.axis0.motor.config.current_lim=40		#current limit, amps
 odrv.axis1.motor.config.current_lim=40
@@ -47,9 +55,9 @@ odrv.axis0.config.startup_closed_loop_control=True
 
 # Save updated Odrive configuration
 odrv.save_configuration()
-
+odrv.reboot()
 # Confirm end of program 
-print("all done!")
+print("Configuration complete! Checking axis states at startup")
 
 
 #when working configuration is finally loaded, backup using .json file
