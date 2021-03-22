@@ -31,22 +31,23 @@ if odrv.axis0.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
     odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-#Check axis state
-print(odrv.axis1.current_state)    
+#Set motor zero torque value
+odrv.axis0.controller.input_torque = 0.1
 
-#Run motor 1 at 2 turn/s 
-odrv.axis1.controller.input_vel=5
+#Define range of motor one speeds
+speeds=[1,2,3,4]
 
-#Output the motor velocity to the command line
-i=0         #Itinerant
+#Initialize list for data logging
 omega=[]    #List for motor speed in turns/s
 tau=[]      #List for motor torque in Nm
-
-while i<60: #Log data
-    i=i+1
-    omega.append(odrv.axis1.encoder.vel_estimate)
-    tau.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
-    time.sleep(0.5)
+for i in speeds:
+    odrv.axis1.controller.input_vel=i
+    j=0         #Itinerant
+    while j<30: #Log data
+        j=j+1
+        omega.append(odrv.axis1.encoder.vel_estimate)
+        tau.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
+        time.sleep(0.5)
     
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
@@ -54,9 +55,7 @@ odrv.axis1.requested_state = AXIS_STATE_IDLE
 
 print(omega)
 print(tau)
-# And this is how function calls are done:
-#for i in [1,2,3,4]:
-    #print('voltage on GPIO{} is {} Volt'.format(i, my_drive.get_adc_voltage(i)))
+
 
 # A sine wave to test
 #t0 = time.monotonic()
