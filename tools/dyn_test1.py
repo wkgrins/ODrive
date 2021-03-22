@@ -20,7 +20,7 @@ except NameError:
     odrv = odrive.find_any()
 
 #Set motor one to ramped velocity control mode, and set motor 0 to torque control mode.
-odrv.axis0.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
+odrv.axis0.controller.config.control_mode = CONTROL_MODE_TORQUE_CONTROL
 odrv.axis1.controller.config.control_mode = CONTROL_MODE_VELOCITY_CONTROL
 
 #Set input mode for motor one to ramped velocity
@@ -33,15 +33,18 @@ if odrv.axis0.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
     odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #Set motor zero torque value
-odrv.axis0.controller.input_torque = 0.1
+odrv.axis0.controller.input_torque = .01
 
 #Define range of motor one speeds
 speeds=[1,2,3,4]
 
 #Initialize list for data logging
-omega=[]    #List for motor speed in turns/s
-tau=[]      #List for motor torque in Nm
-key=[]
+omega0=[]    #List for motor0 speed in turns/s
+omega1=[]
+tau0=[]      #List for motor torque in Nm
+tau1=[]
+velin=[]
+torquein=[]
 
 #Iterate motor speeds and collect rpm and torque data during operation
 for i in speeds:
@@ -49,21 +52,28 @@ for i in speeds:
     j=0         #Itinerant
     while j<30: #Log data
         j=j+1
-        key.append(i)
-        omega.append(odrv.axis1.encoder.vel_estimate)
-        tau.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
+        velin.append(i)
+        torquein.append(0.01)                   #change torque input when using various torques
+        omega0.append(odrv.axis0.encoder.vel_estimate)
+        omega1.append(odrv.axis1.encoder.vel_estimate)
+        tau0.append(8.27*odrv.axis0.motor.current_control.Iq_measured/270)
+        tau1.append(8.27*odrv.axis1.motor.current_control.Iq_measured/270)
         time.sleep(0.5)   
         
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
 odrv.axis1.requested_state = AXIS_STATE_IDLE
 
-#Write output to csv file format
-
-with open('dyntest.txt', 'w') as filehandle:
-    filehandle.write("Key, Speed (turns/s), Torque (Nm)\n")
-    for i in omega:
-        ind=omega.index(i)
-        string=str(key[ind]) + ", " + str(i) + ", " + str(tau[ind]) + "\n"
-        filehandle.write(string)
+#Write output to csv file format when desired
+choice = input("Would you like to write the data to a file? Y/N")
+if choice == "Y":
+    with open('dyntest.txt', 'w') as filehandle:
+        filehandle.write("Velin, Torquein, Speed0 (turns/s), Speed1 (turns/s), Torque0 (Nm), Torque1 (Nm)\n")
+        for i in omega0:
+            ind=omega0.index(i)
+            string=str(velin[ind]) + ", " + str(torquein[ind]) + ", " + str(i) + "," + str(omega1[ind]) + ", " + str(tau0[ind]) + ", " + str(tau1[ind]) + "\n"
+            filehandle.write(string)
+else:
+    print("Complete!")
+    
 
