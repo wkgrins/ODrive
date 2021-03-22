@@ -2,8 +2,11 @@
 """
 Configure odrive connected to two motors for operation in Dynamometer
 All configuration settings are saved to the odrive firmware upon completion.
-Must boot up odrivetool and run odrv0.erase_configuration() and power cycle
-odrive before running configuration script. 
+Must boot up odrivetool and run odrv0.erase_configuration() to erase existing configurations. 
+After erase configuration, power cycle odrive. Then board is ready for new config. 
+
+Author: Willa Grinsfelder willa@grinsfelder.com
+Date: 22 March 2021
 """
 
 from __future__ import print_function
@@ -40,22 +43,19 @@ odrv.axis0.encoder.config.cpr=2048*4		#CUI encoders set to max resolution
 odrv.axis1.encoder.config.cpr=2048*4
 
 #Startup Procedure
-odrv.axis0.config.startup_motor_calibration = True
+odrv.axis0.config.startup_motor_calibration = True #Set motors to run cailbration on startup
 odrv.axis1.config.startup_motor_calibration = True
-odrv.axis0.config.startup_encoder_offset_calibration=True
+odrv.axis0.config.startup_encoder_offset_calibration=True #Set encoders to run calibration on startup
 odrv.axis1.config.startup_encoder_offset_calibration=True
-odrv.axis0.config.startup_closed_loop_control=True
+odrv.axis0.config.startup_closed_loop_control=True #Set axis state to closed loop control on startup
 odrv.axis0.config.startup_closed_loop_control=True
 
-# Save updated Odrive configuration
+# Save updated Odrive configuration to board
 odrv.save_configuration()
 
 # Confirm end of program 
 print("Configuration complete!")
 
-
-#when working configuration is finally loaded, backup using .json file
-#odrivetool backup-config my_config.json
 
 
 
