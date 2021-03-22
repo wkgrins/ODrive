@@ -27,8 +27,9 @@ odrv.axis1.controller.config.input_mode = INPUT_MODE_VEL_RAMP
 #Set input mode for motor zero to passthrough
 odrv.axis0.controller.config.input_mode = INPUT_MODE_PASSTHROUGH
 
-odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+if odrv.axis0.current_state != AXIS_STATE_CLOSED_LOOP_CONTROL:
+    odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+    odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
 #Check axis state
 print(odrv.axis1.current_state)    
@@ -40,6 +41,9 @@ sp=odrv.axis1.controller.vel_setpoint
 print("We're cookin' with sauce now my friend!")
 # To read a value, simply read the property
 print("Bus voltage is " + str(odrv.vbus_voltage) + "V")
+
+#Run script for 1 minute
+time.sleep(60)
 
 #Shut down at end of script
 odrv.axis0.requested_state = AXIS_STATE_IDLE
