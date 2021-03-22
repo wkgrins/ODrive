@@ -18,22 +18,14 @@ except NameError:
     print("finding an odrive...")
     odrv = odrive.find_any()
 
-print("complete")
-#Find a connected ODrive (this will block until you connect one)
-#print("finding an odrive...")
-#odrv = odrive.find_any()
+# Allow motor state to fall to idle
+while odrv.axis0.current_state != AXIS_STATE_IDLE:
+    time.sleep(0.1)
 
-# Find an ODrive that is connected on the serial port /dev/ttyUSB0
-#my_drive = odrive.find_any("serial:/dev/ttyUSB0")
+odrv.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
+odrv.axis1.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
 
-# Calibrate motor and wait for it to finish
-#print("starting calibration...")
-#my_drive.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
-#while my_drive.axis0.current_state != AXIS_STATE_IDLE:
-#    time.sleep(0.1)
-
-#my_drive.axis0.requested_state = AXIS_STATE_CLOSED_LOOP_CONTROL
-
+print("Locked and loaded baby!")
 # To read a value, simply read the property
 #print("Bus voltage is " + str(my_drive.vbus_voltage) + "V")
 
