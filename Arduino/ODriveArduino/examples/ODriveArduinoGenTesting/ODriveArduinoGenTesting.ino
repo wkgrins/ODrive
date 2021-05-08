@@ -26,7 +26,7 @@ template<>        inline Print& operator <<(Print &obj, float arg) { obj.print(a
 // pin 19: RX - connect to ODrive TX
 // pin 18: TX - connect to ODrive RX
 // See https://www.arduino.cc/reference/en/language/functions/communication/serial/ for other options
- HardwareSerial& odrive_serial = Serial1;
+HardwareSerial& odrive_serial = Serial1;
 
 // Arduino without spare serial ports (such as Arduino UNO) have to use software serial.
 // Note that this is implemented poorly and can lead to wrong data sent or read.
@@ -63,6 +63,9 @@ void setup() {
   Serial.println("Send the character 's' to exectue test move");
   Serial.println("Send the character 'b' to read bus voltage");
   Serial.println("Send the character 'p' to read motor positions in a 10s loop");
+  Serial.println("Send the character 'f' to run the motor at 1 m/s for generator frequency measurement");
+  Serial.println("Send the character 'g' to run the motor at 5 m/s for generator frequency measurement");
+  Serial.println("Send the character 'h' to run the motor at 10 m/s for generator frequency measurement");
 }
 
 void loop() {
@@ -99,7 +102,17 @@ void loop() {
         delay(5);
       }
     }
-
+    
+    // Constant Velocity Move
+    if (c == 'f') {
+      Serial.println("Executing Velocity Control 1 m/s\n");
+      float vel_m0 = 1.0f;
+      float vel_end = 0.0f;
+      odrive.SetVelocity(0, vel_m0);
+      delay(30000);
+      odrive.SetVelocity(0, vel_end);
+      Serial.println("Finished Velocity Control 1 m/s\n");
+    }
     // Read bus voltage
     if (c == 'b') {
       odrive_serial << "r vbus_voltage\n";
